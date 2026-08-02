@@ -1,0 +1,487 @@
+// In-memory mock dataset for the admin panel. Lets the whole UI run standalone
+// (no backend) with realistic, mutable data. The real API adapter mirrors this
+// shape 1:1, so swapping USE_MOCK=false only changes the transport.
+
+import type {
+  User, Category, ProviderProfile, Service, Booking, Tender, Bid, Wallet,
+  WalletTransaction, Review, Notification, Coupon, Conversation, ChatMessage,
+  AuditLogEntry, BookingStatus, TenderStatus, PaymentMethod, PaymentStatus,
+  Address, Favorite, SupportTicket, TicketMessage, TicketStatus, TicketPriority,
+  TicketCategory, Payout, OtpLogEntry,
+} from '../types';
+
+const rupees = (r: number) => r * 100;
+
+// Deterministic pseudo-random so seeded data is stable across reloads.
+let seed = 20260726;
+const rand = () => {
+  seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+  return seed / 0x7fffffff;
+};
+const pick = <T>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
+const daysAgo = (n: number) => new Date(2026, 6, 26 - n, 9 + Math.floor(rand() * 8), Math.floor(rand() * 60)).toISOString();
+
+export const categories: Category[] = [
+  { id: 'c1', name: 'Plumbing', icon: 'Wrench', serviceCount: 45 },
+  { id: 'c2', name: 'Electrical', icon: 'Zap', serviceCount: 38 },
+  { id: 'c3', name: 'Carpentry', icon: 'Hammer', serviceCount: 52 },
+  { id: 'c4', name: 'Cleaning', icon: 'Sparkles', serviceCount: 67 },
+  { id: 'c5', name: 'Painting', icon: 'Paintbrush', serviceCount: 41 },
+  { id: 'c6', name: 'AC Repair', icon: 'Wind', serviceCount: 33 },
+  { id: 'c7', name: 'Renovation', icon: 'Home', serviceCount: 29 },
+];
+
+const AVATAR_M = 'https://images.unsplash.com/photo-1615724320397-9d4db10ec2a5?w=200&h=200&fit=crop&auto=format';
+const AVATAR_F = 'https://images.unsplash.com/photo-1489514354504-1653aa90e34e?w=200&h=200&fit=crop&auto=format';
+
+const areas = ['Andheri West', 'Bandra West', 'Goregaon East', 'Kurla West', 'Thane West', 'Chembur', 'Powai', 'Malad West', 'Vikhroli', 'Navi Mumbai'];
+
+interface ProviderSeed {
+  name: string; cats: string[]; rating: number; reviews: number; exp: number; jobs: number;
+  from: number; per: string; area: string; avail: boolean; verified: boolean; badge?: string; phone: string;
+  specialties: string[]; bio: string; avatar: string;
+}
+
+const providerSeeds: ProviderSeed[] = [
+  { name: 'Rajesh Kumar', cats: ['Plumbing'], rating: 4.8, reviews: 234, exp: 10, jobs: 847, from: 500, per: '/hr', area: 'Andheri West', avail: true, verified: true, badge: 'Top Rated', phone: '+91 98765 43210', specialties: ['Pipe Leak Fix', 'Bathroom Fitting', 'Drainage', 'Water Heater'], bio: 'Expert plumber with 10+ years. Licensed & insured.', avatar: AVATAR_M },
+  { name: 'Amit Sharma', cats: ['Electrical'], rating: 4.9, reviews: 189, exp: 8, jobs: 620, from: 600, per: '/hr', area: 'Bandra West', avail: true, verified: true, badge: 'Verified Pro', phone: '+91 87654 32109', specialties: ['Wiring', 'MCB/Fuse Box', 'Fan & Light Install', 'CCTV'], bio: 'Certified electrician for residential & commercial work.', avatar: AVATAR_M },
+  { name: 'Vikram Singh', cats: ['Carpentry'], rating: 4.7, reviews: 156, exp: 12, jobs: 510, from: 800, per: '/hr', area: 'Goregaon East', avail: true, verified: true, phone: '+91 76543 21098', specialties: ['Furniture', 'Door/Window Fix', 'Modular Kitchen', 'Wardrobe'], bio: 'Custom furniture and woodwork specialist.', avatar: AVATAR_M },
+  { name: 'Priya Reddy', cats: ['Cleaning'], rating: 4.9, reviews: 312, exp: 5, jobs: 1200, from: 1200, per: '/visit', area: 'Kurla West', avail: false, verified: true, badge: 'Most Booked', phone: '+91 65432 10987', specialties: ['Deep Clean', 'Sofa Clean', 'Carpet Clean'], bio: 'Professional cleaning with eco-friendly products.', avatar: AVATAR_F },
+  { name: 'Suresh Patel', cats: ['Painting'], rating: 4.6, reviews: 198, exp: 15, jobs: 730, from: 450, per: '/hr', area: 'Thane West', avail: true, verified: false, phone: '+91 54321 09876', specialties: ['Interior Paint', 'Exterior Paint', 'Texture', 'Waterproofing'], bio: 'Interior & exterior painting with premium materials.', avatar: AVATAR_M },
+  { name: 'Arjun Mehta', cats: ['AC Repair', 'Electrical'], rating: 4.7, reviews: 120, exp: 7, jobs: 390, from: 700, per: '/visit', area: 'Chembur', avail: true, verified: true, phone: '+91 43210 98765', specialties: ['AC Service', 'AC Gas Refill', 'AC Installation'], bio: 'Expert AC repair & servicing for all brands.', avatar: AVATAR_M },
+  { name: 'Deepak Nair', cats: ['Renovation', 'Carpentry', 'Painting'], rating: 4.8, reviews: 87, exp: 18, jobs: 284, from: 2500, per: '/day', area: 'Powai', avail: true, verified: true, badge: 'Premium', phone: '+91 32109 87654', specialties: ['Full Renovation', 'False Ceiling', 'Tiling'], bio: 'Full-service renovation contractor.', avatar: AVATAR_M },
+  { name: 'Kavita Joshi', cats: ['Cleaning', 'Plumbing'], rating: 4.5, reviews: 90, exp: 3, jobs: 280, from: 999, per: '/visit', area: 'Malad West', avail: true, verified: false, phone: '+91 21098 76543', specialties: ['Home Cleaning', 'Kitchen Deep Clean'], bio: 'Affordable and thorough home cleaning.', avatar: AVATAR_F },
+  { name: 'Santosh Yadav', cats: ['Plumbing', 'Renovation'], rating: 4.6, reviews: 143, exp: 9, jobs: 460, from: 550, per: '/hr', area: 'Vikhroli', avail: false, verified: true, phone: '+91 10987 65432', specialties: ['Overhead Tank', 'Bore Well', 'Pipeline'], bio: 'Senior plumber with tank & bore well expertise.', avatar: AVATAR_M },
+  { name: 'Mohan Pillai', cats: ['Electrical'], rating: 4.4, reviews: 67, exp: 4, jobs: 210, from: 500, per: '/hr', area: 'Navi Mumbai', avail: true, verified: false, phone: '+91 09876 54321', specialties: ['Switches & Sockets', 'Earthing', 'LED Fitting'], bio: 'Electrical work for homes and shops.', avatar: AVATAR_M },
+];
+
+const catByName = (n: string) => categories.find((c) => c.name === n)!;
+
+export const users: User[] = [];
+export const providers: ProviderProfile[] = [];
+export const wallets: Wallet[] = [];
+
+// Build provider users + profiles.
+providerSeeds.forEach((s, i) => {
+  const userId = `u_p${i + 1}`;
+  const providerId = `p${i + 1}`;
+  const user: User = {
+    id: userId,
+    phone: s.phone,
+    name: s.name,
+    email: `${s.name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
+    role: 'PROVIDER',
+    avatar: s.avatar,
+    city: 'Mumbai',
+    area: s.area,
+    lat: 19 + rand() * 0.2,
+    lng: 72.8 + rand() * 0.2,
+    referralCode: `SEVA${1000 + i}`,
+    isActive: true,
+    notifyBookings: true, notifyPromotions: false, notifyReminders: true, notifyChat: true,
+    createdAt: daysAgo(120 - i * 8),
+    updatedAt: daysAgo(i),
+  };
+  const profile: ProviderProfile = {
+    id: providerId,
+    userId,
+    bio: s.bio,
+    experience: s.exp,
+    completedJobs: s.jobs,
+    priceFrom: rupees(s.from),
+    pricePer: s.per,
+    rating: s.rating,
+    reviewCount: s.reviews,
+    isAvailable: s.avail,
+    isVerified: s.verified,
+    badge: s.badge ?? null,
+    specialties: s.specialties,
+    businessName: `${s.name.split(' ')[0]} Services`,
+    businessType: pick(['Individual', 'Registered Firm', 'Sole Proprietor']),
+    aadhaar: `${2000 + i}-${3000 + i}-${4000 + i}`,
+    pan: `ABCPK${1000 + i}Z`,
+    gstin: s.verified && rand() > 0.5 ? `27ABCPK${1000 + i}Z1Z5` : null,
+    // Verified providers have reviewed docs; unverified ones have docs pending review.
+    documents: [
+      'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&h=400&fit=crop&auto=format',
+      'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&h=400&fit=crop&auto=format',
+    ],
+    lat: user.lat, lng: user.lng, city: 'Mumbai', area: s.area,
+    createdAt: user.createdAt,
+    user: { id: userId, name: s.name, avatar: s.avatar, phone: s.phone, email: user.email },
+    categories: s.cats.map(catByName),
+    totalEarnedPaise: rupees(s.jobs * (s.from + Math.floor(rand() * 400))),
+    activeBookings: Math.floor(rand() * 5),
+  };
+  user.providerProfile = profile;
+  providers.push(profile);
+  users.push(user);
+});
+
+// Build customer users.
+const customerNames = ['Anjali Gupta', 'Rohan Desai', 'Sneha Iyer', 'Karan Malhotra', 'Pooja Shah', 'Vivek Rao', 'Meera Nambiar', 'Aditya Verma', 'Divya Menon', 'Nikhil Bose', 'Shreya Kapoor', 'Manish Agarwal', 'Ritu Chauhan', 'Sanjay Dubey', 'Farah Khan', 'Gaurav Sethi', ' Isha Pandey', 'Tarun Bhatt', 'Lakshmi Nair', 'Varun Saxena'];
+customerNames.forEach((name, i) => {
+  const id = `u_c${i + 1}`;
+  users.push({
+    id,
+    phone: `+91 9${(800000000 + i * 111111).toString().slice(0, 9)}`,
+    name: name.trim(),
+    email: `${name.trim().toLowerCase().replace(/\s+/g, '.')}@example.com`,
+    role: 'CUSTOMER',
+    avatar: i % 2 === 0 ? AVATAR_F : AVATAR_M,
+    city: 'Mumbai',
+    area: pick(areas),
+    lat: 19 + rand() * 0.2, lng: 72.8 + rand() * 0.2,
+    referralCode: `SEVA${2000 + i}`,
+    isActive: rand() > 0.08,
+    notifyBookings: true, notifyPromotions: rand() > 0.5, notifyReminders: true, notifyChat: true,
+    createdAt: daysAgo(100 - i * 4),
+    updatedAt: daysAgo(i),
+    bookingsCount: Math.floor(rand() * 15),
+    totalSpentPaise: rupees(Math.floor(rand() * 40000)),
+  });
+});
+
+// Wallets for everyone.
+users.forEach((u) => {
+  const balance = rupees(Math.floor(rand() * 5000));
+  wallets.push({
+    id: `w_${u.id}`,
+    userId: u.id,
+    balance,
+    user: { id: u.id, name: u.name, phone: u.phone, avatar: u.avatar },
+    transactions: [],
+  });
+});
+
+// Services (one+ per provider).
+export const services: Service[] = [];
+const serviceTitles: Record<string, string[]> = {
+  Plumbing: ['Professional Plumbing Service', 'Emergency Leak Repair'],
+  Electrical: ['Electrical Installation & Repair', 'Wiring & Safety Check'],
+  Carpentry: ['Custom Carpentry Work', 'Modular Kitchen Fitting'],
+  Cleaning: ['Deep Home Cleaning Service', 'Sofa & Carpet Cleaning'],
+  Painting: ['Interior & Exterior Painting', 'Waterproofing & Texture'],
+  'AC Repair': ['AC Repair & Servicing', 'AC Installation'],
+  Renovation: ['Complete Home Renovation', 'False Ceiling & Tiling'],
+};
+const SERVICE_IMG = 'https://images.unsplash.com/photo-1581578949510-fa7315c4c350?w=600&h=400&fit=crop&auto=format';
+let sIdx = 1;
+providers.forEach((p) => {
+  p.categories!.forEach((cat) => {
+    const titles = serviceTitles[cat.name] ?? ['General Service'];
+    const title = pick(titles);
+    services.push({
+      id: `s${sIdx++}`,
+      title,
+      description: `${title} by ${p.user!.name}. Reliable and professional.`,
+      price: p.priceFrom,
+      priceUnit: p.pricePer === '/hr' ? '/hour' : p.pricePer,
+      image: SERVICE_IMG,
+      rating: p.rating,
+      reviewCount: Math.floor(p.reviewCount / (p.categories!.length || 1)),
+      createdAt: p.createdAt,
+      categoryId: cat.id,
+      category: cat,
+      providerId: p.id,
+      provider: p,
+    });
+  });
+});
+
+// Bookings.
+export const bookings: Booking[] = [];
+const statuses: BookingStatus[] = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'COMPLETED', 'COMPLETED', 'CANCELLED'];
+const payMethods: PaymentMethod[] = ['UPI', 'CARD', 'WALLET', 'CASH'];
+const customers = users.filter((u) => u.role === 'CUSTOMER');
+for (let i = 0; i < 60; i++) {
+  const svc = pick(services);
+  const cust = pick(customers);
+  const status = pick(statuses);
+  const paid: PaymentStatus = status === 'CANCELLED' ? (rand() > 0.5 ? 'REFUNDED' : 'FAILED') : status === 'PENDING' ? 'PENDING' : 'PAID';
+  const created = daysAgo(Math.floor(rand() * 45));
+  bookings.push({
+    id: `b${i + 1}`,
+    status,
+    scheduledAt: daysAgo(Math.floor(rand() * 30) - 5),
+    address: `${Math.floor(rand() * 300)}, ${pick(areas)}, Mumbai`,
+    notes: rand() > 0.6 ? 'Please call before arriving.' : null,
+    photos: [],
+    amount: svc.price,
+    discount: rand() > 0.7 ? rupees(100) : 0,
+    couponCode: rand() > 0.7 ? 'FIRST100' : null,
+    paymentMethod: pick(payMethods),
+    paymentStatus: paid,
+    cancelledAt: status === 'CANCELLED' ? created : null,
+    cancelReason: status === 'CANCELLED' ? pick(['Customer unavailable', 'Provider cancelled', 'Rescheduled']) : null,
+    completedAt: status === 'COMPLETED' ? created : null,
+    createdAt: created,
+    customerId: cust.id,
+    providerId: svc.providerId,
+    serviceId: svc.id,
+    service: svc,
+    provider: svc.provider,
+    customer: { id: cust.id, name: cust.name, avatar: cust.avatar, phone: cust.phone },
+  });
+}
+
+// Tenders + bids.
+export const tenders: Tender[] = [];
+export const bids: Bid[] = [];
+const tenderTitles = ['3BHK Full Interior Renovation', 'Office Electrical Rewiring', 'Terrace Waterproofing', 'Modular Kitchen Setup', 'Bungalow Exterior Painting', 'Bathroom Remodel (2 units)', 'Commercial AC Installation', 'Society Plumbing Overhaul'];
+const tenderStatuses: TenderStatus[] = ['OPEN', 'OPEN', 'OPEN', 'AWARDED', 'CLOSED', 'CANCELLED'];
+tenderTitles.forEach((title, i) => {
+  const cust = pick(customers);
+  const status = tenderStatuses[i % tenderStatuses.length];
+  const min = rupees(20000 + Math.floor(rand() * 30000));
+  const t: Tender = {
+    id: `t${i + 1}`,
+    title,
+    description: `Looking for an experienced professional for: ${title}. Serious bidders only, must provide references.`,
+    category: pick(categories).name,
+    budgetMin: min,
+    budgetMax: min + rupees(20000 + Math.floor(rand() * 40000)),
+    timeline: pick(['1 week', '2 weeks', '1 month', 'Flexible']),
+    city: 'Mumbai', area: pick(areas),
+    attachments: [],
+    status,
+    createdAt: daysAgo(Math.floor(rand() * 40)),
+    customerId: cust.id,
+    customer: { id: cust.id, name: cust.name, avatar: cust.avatar, phone: cust.phone },
+    bids: [],
+    _count: { bids: 0 },
+  };
+  const nBids = 1 + Math.floor(rand() * 4);
+  for (let b = 0; b < nBids; b++) {
+    const prov = pick(providers);
+    const bid: Bid = {
+      id: `bid_${t.id}_${b}`,
+      amount: t.budgetMin + Math.floor(rand() * (t.budgetMax - t.budgetMin)),
+      message: 'I can complete this on time with quality materials.',
+      timeline: pick(['1 week', '2 weeks', '10 days']),
+      status: status === 'AWARDED' && b === 0 ? 'ACCEPTED' : 'PENDING',
+      createdAt: t.createdAt,
+      tenderId: t.id,
+      providerId: prov.id,
+      provider: prov,
+    };
+    bids.push(bid);
+    t.bids!.push(bid);
+  }
+  t._count = { bids: t.bids!.length };
+  tenders.push(t);
+});
+
+// Wallet transactions.
+export const walletTransactions: WalletTransaction[] = [];
+wallets.forEach((w) => {
+  const owner = users.find((u) => u.id === w.userId)!;
+  let running = 0;
+  const n = Math.floor(rand() * 6);
+  for (let i = 0; i < n; i++) {
+    const isCredit = rand() > 0.4;
+    const amount = rupees(100 + Math.floor(rand() * 2000));
+    running += isCredit ? amount : -amount;
+    if (running < 0) running = amount;
+    const txn: WalletTransaction = {
+      id: `wt_${w.id}_${i}`,
+      type: isCredit ? 'CREDIT' : 'DEBIT',
+      amount,
+      balanceAfter: running,
+      description: isCredit ? pick(['Wallet top-up', 'Refund', 'Referral bonus']) : pick(['Booking payment', 'Service charge']),
+      createdAt: daysAgo(Math.floor(rand() * 40)),
+      walletId: w.id,
+      user: { id: owner.id, name: owner.name, phone: owner.phone },
+    };
+    walletTransactions.push(txn);
+    w.transactions!.push(txn);
+  }
+  w.balance = running;
+});
+
+// Reviews.
+export const reviews: Review[] = [];
+const reviewComments = ['Excellent work, very professional!', 'On time and clean. Recommended.', 'Good service but slightly expensive.', 'Fixed the issue quickly. Thanks!', 'Average experience.', 'Outstanding, will book again.', 'Rude behaviour, not satisfied.', 'Great value for money.'];
+bookings.filter((b) => b.status === 'COMPLETED').forEach((b, i) => {
+  if (rand() > 0.3) {
+    const r: Review = {
+      id: `r${i + 1}`,
+      rating: 3 + Math.floor(rand() * 3),
+      comment: pick(reviewComments),
+      createdAt: b.completedAt!,
+      authorId: b.customerId,
+      providerId: b.providerId,
+      bookingId: b.id,
+      hidden: rand() > 0.9,
+      author: b.customer,
+      provider: { id: b.providerId, user: b.provider?.user },
+    };
+    reviews.push(r);
+    b.review = r;
+  }
+});
+
+// Coupons.
+export const coupons: Coupon[] = [
+  { id: 'cp1', code: 'FIRST100', description: '₹100 off your first booking', discountType: 'FLAT', discountValue: rupees(100), maxDiscount: null, minOrder: rupees(500), active: true, expiresAt: daysAgo(-60), createdAt: daysAgo(90), redemptions: 342 },
+  { id: 'cp2', code: 'MONSOON20', description: '20% off, up to ₹300', discountType: 'PERCENT', discountValue: 20, maxDiscount: rupees(300), minOrder: rupees(800), active: true, expiresAt: daysAgo(-30), createdAt: daysAgo(20), redemptions: 128 },
+  { id: 'cp3', code: 'CLEAN50', description: '₹50 off cleaning services', discountType: 'FLAT', discountValue: rupees(50), maxDiscount: null, minOrder: rupees(400), active: false, expiresAt: daysAgo(10), createdAt: daysAgo(70), redemptions: 89 },
+  { id: 'cp4', code: 'WELCOME15', description: '15% off for new users', discountType: 'PERCENT', discountValue: 15, maxDiscount: rupees(250), minOrder: rupees(600), active: true, expiresAt: null, createdAt: daysAgo(45), redemptions: 210 },
+];
+
+// Notifications (broadcast history / recent per-user).
+export const notifications: Notification[] = [
+  { id: 'n1', type: 'SYSTEM', title: 'Monsoon Sale Live!', body: 'Flat 20% off on all cleaning services this week.', read: false, createdAt: daysAgo(1) },
+  { id: 'n2', type: 'SYSTEM', title: 'App Update', body: 'New in-app chat is now available.', read: true, createdAt: daysAgo(5) },
+  { id: 'n3', type: 'SYSTEM', title: 'Refer & Earn', body: 'Invite friends and earn ₹100 wallet credit.', read: true, createdAt: daysAgo(12) },
+];
+
+// Conversations (support view).
+export const conversations: Conversation[] = [];
+for (let i = 0; i < 8; i++) {
+  const cust = pick(customers);
+  const prov = pick(providers);
+  const msgs: ChatMessage[] = [];
+  const nMsg = 2 + Math.floor(rand() * 5);
+  for (let m = 0; m < nMsg; m++) {
+    msgs.push({
+      id: `cm_${i}_${m}`,
+      conversationId: `conv${i + 1}`,
+      senderId: m % 2 === 0 ? cust.id : prov.userId,
+      body: pick(['Hi, are you available tomorrow?', 'Yes, what time works for you?', 'Around 10 AM.', 'Sure, confirmed.', 'What is the estimated cost?', 'Depends on the work, I will assess on site.']),
+      createdAt: daysAgo(Math.floor(rand() * 10)),
+    });
+  }
+  conversations.push({
+    id: `conv${i + 1}`,
+    providerId: prov.id,
+    customerId: cust.id,
+    createdAt: daysAgo(15),
+    updatedAt: msgs[msgs.length - 1].createdAt,
+    provider: prov,
+    customer: { id: cust.id, name: cust.name, avatar: cust.avatar },
+    messages: msgs,
+    lastMessage: msgs[msgs.length - 1],
+    messageCount: msgs.length,
+  });
+}
+
+// Audit log.
+export const auditLog: AuditLogEntry[] = [
+  { id: 'a1', actor: 'Admin', action: 'Verified provider', target: 'Amit Sharma', createdAt: daysAgo(0) },
+  { id: 'a2', actor: 'Admin', action: 'Refunded booking', target: '#b12 — ₹1,200', createdAt: daysAgo(0) },
+  { id: 'a3', actor: 'Admin', action: 'Deactivated user', target: 'Farah Khan', createdAt: daysAgo(1) },
+  { id: 'a4', actor: 'Admin', action: 'Created coupon', target: 'MONSOON20', createdAt: daysAgo(1) },
+  { id: 'a5', actor: 'Admin', action: 'Hid review', target: '#r7 (1★)', createdAt: daysAgo(2) },
+  { id: 'a6', actor: 'Admin', action: 'Added category', target: 'Renovation', createdAt: daysAgo(3) },
+];
+
+// Saved addresses, keyed by customer user id.
+export const addressesByUser: Record<string, Address[]> = {};
+customers.forEach((c, i) => {
+  const n = 1 + Math.floor(rand() * 2);
+  addressesByUser[c.id] = Array.from({ length: n }, (_, k) => ({
+    id: `addr_${c.id}_${k}`,
+    label: k === 0 ? 'Home' : pick(['Office', 'Other']),
+    line: `${Math.floor(rand() * 300)}, ${pick(['Sunrise Apts', 'Green Residency', 'Palm Court', 'Lake View'])}, ${c.area}`,
+    city: 'Mumbai',
+    pincode: `4000${(10 + i) % 90}`,
+    lat: c.lat, lng: c.lng,
+    isDefault: k === 0,
+    createdAt: daysAgo(80 - i),
+  }));
+});
+
+// Favorites, keyed by customer user id.
+export const favoritesByUser: Record<string, Favorite[]> = {};
+customers.forEach((c) => {
+  const n = Math.floor(rand() * 4);
+  const picked = new Set<string>();
+  favoritesByUser[c.id] = Array.from({ length: n }, (_, k) => {
+    let prov = pick(providers);
+    let guard = 0;
+    while (picked.has(prov.id) && guard++ < 5) prov = pick(providers);
+    picked.add(prov.id);
+    return { id: `fav_${c.id}_${k}`, createdAt: daysAgo(Math.floor(rand() * 60)), provider: prov };
+  });
+});
+
+// Support tickets.
+export const tickets: SupportTicket[] = [];
+const ticketSeeds: {
+  subject: string; category: TicketCategory; priority: TicketPriority; status: TicketStatus; msgs: [string, boolean][];
+}[] = [
+  { subject: 'Refund not received for cancelled booking', category: 'REFUND', priority: 'HIGH', status: 'OPEN', msgs: [['I cancelled my plumbing booking 3 days ago but the ₹500 refund has not reached my wallet yet.', false]] },
+  { subject: 'Provider did not show up', category: 'BOOKING', priority: 'URGENT', status: 'IN_PROGRESS', msgs: [['The electrician confirmed for 10 AM never arrived and is not answering calls.', false], ['Sorry to hear that — we are contacting the provider now and will arrange a replacement.', true]] },
+  { subject: 'How do I change my registered mobile number?', category: 'ACCOUNT', priority: 'LOW', status: 'WAITING', msgs: [['I got a new SIM and want to update my number on the app.', false], ['You can update it under Profile → Edit Profile. Could you confirm your current registered number?', true]] },
+  { subject: 'App crashes on payment screen', category: 'TECHNICAL', priority: 'MEDIUM', status: 'RESOLVED', msgs: [['Every time I try to pay via UPI the app closes itself.', false], ['This was a known issue fixed in the latest update — please update the app.', true], ['Working now, thanks!', false]] },
+  { subject: 'Provider was rude and left early', category: 'PROVIDER', priority: 'HIGH', status: 'OPEN', msgs: [['The cleaner left after 30 minutes and was very rude when I asked about it.', false]] },
+  { subject: 'Charged twice for one booking', category: 'PAYMENT', priority: 'URGENT', status: 'IN_PROGRESS', msgs: [['My card was charged ₹1,200 twice for the same AC service booking.', false], ['We have located the duplicate charge and initiated a reversal — it will reflect in 5-7 days.', true]] },
+  { subject: 'Cannot apply coupon code', category: 'OTHER', priority: 'LOW', status: 'CLOSED', msgs: [['MONSOON20 says invalid at checkout.', false], ['That coupon expired on 30 June. FIRST100 is still active.', true]] },
+];
+ticketSeeds.forEach((t, i) => {
+  const cust = customers[i % customers.length];
+  const admin = { id: 'admin1', name: 'Platform Admin', avatar: null };
+  const baseDay = 10 - i;
+  const messages: TicketMessage[] = t.msgs.map((m, k) => ({
+    id: `tm_${i}_${k}`,
+    ticketId: `tk${i + 1}`,
+    senderId: m[1] ? admin.id : cust.id,
+    fromAdmin: m[1],
+    body: m[0],
+    createdAt: daysAgo(baseDay - k * 0.2),
+    sender: m[1] ? admin : { id: cust.id, name: cust.name, avatar: cust.avatar },
+  }));
+  const last = messages[messages.length - 1];
+  tickets.push({
+    id: `tk${i + 1}`,
+    subject: t.subject,
+    category: t.category,
+    status: t.status,
+    priority: t.priority,
+    requesterId: cust.id,
+    assigneeId: t.msgs.some((m) => m[1]) ? admin.id : null,
+    bookingId: null,
+    createdAt: daysAgo(baseDay),
+    updatedAt: last.createdAt,
+    resolvedAt: t.status === 'RESOLVED' || t.status === 'CLOSED' ? last.createdAt : null,
+    closedAt: t.status === 'CLOSED' ? last.createdAt : null,
+    lastReplyAt: last.createdAt,
+    requester: { id: cust.id, name: cust.name, avatar: cust.avatar, phone: cust.phone, email: cust.email, role: 'CUSTOMER' },
+    assignee: t.msgs.some((m) => m[1]) ? { id: admin.id, name: admin.name } : null,
+    booking: null,
+    messages,
+    _count: { messages: messages.length },
+  });
+});
+
+// Provider payouts (withdrawal requests).
+export const payouts: Payout[] = providers.slice(0, 5).map((p, i) => {
+  const status = (['REQUESTED', 'REQUESTED', 'PAID', 'REJECTED', 'REQUESTED'] as const)[i];
+  return {
+    id: `po${i + 1}`,
+    amount: rupees(2000 + i * 1500),
+    upiId: `${(p.user?.name ?? 'provider').split(' ')[0].toLowerCase()}@upi`,
+    status,
+    note: null,
+    createdAt: daysAgo(i + 1),
+    processedAt: status === 'REQUESTED' ? null : daysAgo(i),
+    provider: { id: p.userId, name: p.user?.name ?? null, phone: p.user?.phone ?? '', avatar: p.user?.avatar ?? null },
+  };
+});
+
+// OTP / login attempt logs.
+export const otpLogs: OtpLogEntry[] = users.slice(0, 14).map((u, i) => {
+  const consumed = i % 3 !== 0;
+  const expired = !consumed && i % 2 === 0;
+  return {
+    id: `otp${i + 1}`,
+    phone: (u.phone || '').replace(/\D/g, '').slice(-10),
+    consumed,
+    expired,
+    expiresAt: daysAgo(-0.007 * i),
+    createdAt: daysAgo(i * 0.5),
+    userName: u.name,
+    userRole: u.role,
+  };
+});
