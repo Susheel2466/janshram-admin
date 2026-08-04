@@ -177,7 +177,7 @@ export const mockAdapter = {
         const q = norm(params.q as string);
         rows = rows.filter((p) => norm(p.user?.name).includes(q) || norm(p.businessName).includes(q) || norm(p.area).includes(q));
       }
-      rows.sort((a, b) => b.rating - a.rating);
+      rows.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
       return delay(paginate(rows, params.page, params.limit ?? 10));
     },
     get: (id: string) => {
@@ -207,7 +207,7 @@ export const mockAdapter = {
     pendingKyc: () => {
       const rows = db.providers
         .filter((p) => !p.isVerified)
-        .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
       return delay({ providers: rows });
     },
   },
@@ -216,7 +216,7 @@ export const mockAdapter = {
     list: () => delay({ categories: [...db.categories] }),
     create: (data: { name: string; icon: string }) => {
       const cat: Category = { id: `c${Date.now()}`, name: data.name, icon: data.icon, serviceCount: 0 };
-      db.categories.push(cat);
+      db.categories.unshift(cat);
       return delay({ category: cat });
     },
     update: (id: string, data: Partial<Category>) => {
@@ -239,6 +239,7 @@ export const mockAdapter = {
         const q = norm(params.q as string);
         rows = rows.filter((s) => norm(s.title).includes(q) || norm(s.provider?.user?.name).includes(q));
       }
+      rows.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
       return delay(paginate(rows, params.page, params.limit ?? 10));
     },
     create: (data: { title: string; description?: string | null; priceRupees: number; priceUnit?: string; image?: string | null; categoryId: string; providerId: string }) => {
@@ -393,7 +394,7 @@ export const mockAdapter = {
   },
 
   coupons: {
-    list: () => delay({ coupons: [...db.coupons] }),
+    list: () => delay({ coupons: [...db.coupons].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)) }),
     create: (data: Omit<Coupon, 'id' | 'createdAt' | 'redemptions'>) => {
       const coupon: Coupon = { ...data, id: `cp${Date.now()}`, createdAt: new Date().toISOString(), redemptions: 0 };
       db.coupons.unshift(coupon);

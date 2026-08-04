@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus, Pencil, Trash2, Shapes,
-  Wrench, Zap, Hammer, Sparkles, Paintbrush, Wind, Home, Truck, Scissors, Leaf, Shield, Droplet,
-  type LucideIcon as LucideIconType,
-} from 'lucide-react';
+import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { adminApi } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
+import { CategoryIcon, IconPicker } from '../components/CategoryIcon';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -22,28 +19,16 @@ import {
 } from '../components/ui/alert-dialog';
 import type { Category } from '../lib/types';
 
-// Curated icon set for categories. Explicit map keeps lucide tree-shakeable —
-// importing the whole icon namespace would balloon this chunk by ~700 KB.
-const ICON_MAP: Record<string, LucideIconType> = {
-  Wrench, Zap, Hammer, Sparkles, Paintbrush, Wind, Home, Truck, Scissors, Leaf, Shield, Droplet,
-};
-const ICON_OPTIONS = Object.keys(ICON_MAP);
-
-function LucideIcon({ name, className }: { name: string | null; className?: string }) {
-  const Cmp = (name && ICON_MAP[name]) || Shapes;
-  return <Cmp className={className} />;
-}
-
 export function Categories() {
   const { data, loading, refetch } = useApi(() => adminApi.categories.list(), []);
   const [editing, setEditing] = useState<Category | null>(null);
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<Category | null>(null);
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('Wrench');
+  const [icon, setIcon] = useState('wrench');
 
-  const openCreate = () => { setEditing(null); setName(''); setIcon('Wrench'); setOpen(true); };
-  const openEdit = (c: Category) => { setEditing(c); setName(c.name); setIcon(c.icon ?? 'Wrench'); setOpen(true); };
+  const openCreate = () => { setEditing(null); setName(''); setIcon('wrench'); setOpen(true); };
+  const openEdit = (c: Category) => { setEditing(c); setName(c.name); setIcon(c.icon ?? 'wrench'); setOpen(true); };
 
   const save = async () => {
     if (!name.trim()) return toast.error('Name is required');
@@ -81,7 +66,7 @@ export function Categories() {
               <Card key={c.id} className="p-5 group">
                 <div className="flex items-start justify-between">
                   <div className="size-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                    <LucideIcon name={c.icon} className="size-5" />
+                    <CategoryIcon icon={c.icon} className="size-5" />
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="ghost" size="icon" className="size-8" onClick={() => openEdit(c)}>
@@ -109,21 +94,16 @@ export function Categories() {
               <Input id="cat-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Pest Control" />
             </div>
             <div className="space-y-2">
-              <Label>Icon</Label>
-              <div className="grid grid-cols-6 gap-2">
-                {ICON_OPTIONS.map((ic) => (
-                  <button
-                    key={ic}
-                    type="button"
-                    onClick={() => setIcon(ic)}
-                    className={`aspect-square rounded-lg flex items-center justify-center border transition-colors ${
-                      icon === ic ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-accent'
-                    }`}
-                  >
-                    <LucideIcon name={ic} className="size-5" />
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <Label>Icon</Label>
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="size-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                    <CategoryIcon icon={icon} className="size-3.5" />
+                  </span>
+                  {icon}
+                </span>
               </div>
+              <IconPicker value={icon} onChange={setIcon} />
             </div>
           </div>
           <DialogFooter>

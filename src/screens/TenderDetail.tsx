@@ -56,6 +56,7 @@ export function TenderDetail() {
             <p className="text-sm mb-4">{t.description}</p>
             <Field label="Budget" value={`${formatINR(t.budgetMin)} – ${formatINR(t.budgetMax)}`} />
             <Field label="Timeline" value={t.timeline} />
+            <Field label="Urgency" value={t.urgency ? t.urgency.charAt(0) + t.urgency.slice(1).toLowerCase() : '—'} />
             <Field label="Status" value={<StatusBadge status={t.status} />} />
             <Field label="Posted" value={fmtDateTime(t.createdAt)} />
           </CardContent>

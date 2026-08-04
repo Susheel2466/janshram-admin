@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { MoreHorizontal, BadgeCheck, Eye, CircleSlash } from 'lucide-react';
+import { MoreHorizontal, BadgeCheck, Eye, CircleSlash, Power, Award, Check, CheckCircle2 } from 'lucide-react';
 import { adminApi, formatINR } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
@@ -13,8 +13,12 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuLabel, DropdownMenuSeparator,
 } from '../components/ui/dropdown-menu';
 import type { ProviderProfile } from '../lib/types';
+
+const NONE = '__none__';
+const BADGES = [NONE, 'Top Rated', 'Verified Pro', 'Most Booked', 'Premium'];
 
 export function Providers() {
   const navigate = useNavigate();
@@ -43,6 +47,18 @@ export function Providers() {
   const toggleAvail = async (p: ProviderProfile) => {
     await adminApi.providers.setAvailable(p.id, !p.isAvailable);
     toast.success('Availability updated');
+    refetch();
+  };
+  const setBadge = async (p: ProviderProfile, badge: string) => {
+    const value = badge === NONE ? null : badge;
+    await adminApi.providers.setBadge(p.id, value);
+    toast.success(value ? `Badge set: ${value}` : 'Badge removed');
+    refetch();
+  };
+  const toggleActive = async (p: ProviderProfile) => {
+    if (!p.user?.id) return;
+    await adminApi.users.setActive(p.user.id, !p.user.isActive);
+    toast.success(p.user.isActive ? 'Account deactivated' : 'Account activated');
     refetch();
   };
 
@@ -74,27 +90,65 @@ export function Providers() {
     },
     {
       key: 'actions',
-      header: '',
-      headerClassName: 'w-10',
+      header: 'Actions',
+      headerClassName: 'w-[230px]',
       cell: (p) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8" onClick={(e) => e.stopPropagation()}>
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/providers/${p.id}`); }}>
-              <Eye className="size-4" /> View details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toggleVerify(p); }}>
-              {p.isVerified ? <><CircleSlash className="size-4" /> Revoke verification</> : <><BadgeCheck className="size-4" /> Verify provider</>}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); toggleAvail(p); }}>
-              Toggle availability
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {/* View details */}
+          <Button variant="outline" size="sm" className="h-8" onClick={() => navigate(`/providers/${p.id}`)}>
+            <Eye className="size-4" /> View
+          </Button>
+
+          {/* Verify / Revoke */}
+          <Button
+            variant={p.isVerified ? 'outline' : 'default'}
+            size="sm"
+            className="h-8"
+            onClick={() => toggleVerify(p)}
+            title={p.isVerified ? 'Revoke verification' : 'Verify provider'}
+          >
+            {p.isVerified ? <CircleSlash className="size-4" /> : <BadgeCheck className="size-4" />}
+            {p.isVerified ? 'Unverify' : 'Verify'}
+          </Button>
+
+          {/* Availability toggle */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={() => toggleAvail(p)}
+            title={p.isAvailable ? 'Set offline' : 'Set available'}
+          >
+            <Power className={`size-4 ${p.isAvailable ? 'text-green-600' : 'text-muted-foreground'}`} />
+          </Button>
+
+          {/* More: badge + account status */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8" title="More actions">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel className="flex items-center gap-1.5"><Award className="size-3.5" /> Feature badge</DropdownMenuLabel>
+              {BADGES.map((b) => (
+                <DropdownMenuItem key={b} onClick={() => setBadge(p, b)}>
+                  {b === NONE ? 'No badge' : b}
+                  {(p.badge ?? NONE) === b && <Check className="size-4 ml-auto text-primary" />}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => toggleActive(p)}
+                className={p.user?.isActive ? 'text-destructive focus:text-destructive' : ''}
+              >
+                {p.user?.isActive
+                  ? <><CircleSlash className="size-4" /> Deactivate account</>
+                  : <><CheckCircle2 className="size-4" /> Activate account</>}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     },
   ];

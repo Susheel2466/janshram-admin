@@ -64,7 +64,7 @@ export interface ProviderProfile {
   city: string | null;
   area: string | null;
   createdAt: string;
-  user?: Pick<User, 'id' | 'name' | 'avatar' | 'phone' | 'email'>;
+  user?: Pick<User, 'id' | 'name' | 'avatar' | 'phone' | 'email' | 'isActive'>;
   categories?: Category[];
   services?: Service[];
   bookings?: Booking[];
@@ -142,6 +142,7 @@ export interface Tender {
   budgetMin: number; // paise
   budgetMax: number; // paise
   timeline: string | null;
+  urgency?: 'LOW' | 'MEDIUM' | 'HIGH';
   city: string | null;
   area: string | null;
   attachments: string[];

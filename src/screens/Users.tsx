@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { MoreHorizontal, UserCheck, UserX, Eye } from 'lucide-react';
+import { UserCheck, UserX, Eye } from 'lucide-react';
 import { adminApi, formatINR } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
@@ -11,9 +11,6 @@ import { SearchInput, UserCell, fmtDate } from '../components/common';
 import { FilterSelect } from '../components/FilterSelect';
 import { StatusBadge } from '../components/StatusBadge';
 import { Button } from '../components/ui/button';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
 import type { User } from '../lib/types';
 
 export function Users() {
@@ -55,27 +52,23 @@ export function Users() {
     { key: 'joined', header: 'Joined', cell: (u) => <span className="text-sm text-muted-foreground">{fmtDate(u.createdAt)}</span> },
     {
       key: 'actions',
-      header: '',
-      headerClassName: 'w-10',
+      header: 'Actions',
+      headerClassName: 'w-[210px]',
       cell: (u) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8" onClick={(e) => e.stopPropagation()}>
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/users/${u.id}`); }}>
-              <Eye className="size-4" /> View details
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(e) => { e.stopPropagation(); toggleActive(u); }}
-              className={u.isActive ? 'text-destructive focus:text-destructive' : ''}
-            >
-              {u.isActive ? <><UserX className="size-4" /> Deactivate</> : <><UserCheck className="size-4" /> Reactivate</>}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <Button variant="outline" size="sm" className="h-8" onClick={() => navigate(`/users/${u.id}`)}>
+            <Eye className="size-4" /> View
+          </Button>
+          <Button
+            variant={u.isActive ? 'outline' : 'default'}
+            size="sm"
+            className={`h-8 ${u.isActive ? 'text-destructive hover:text-destructive' : ''}`}
+            onClick={() => toggleActive(u)}
+            title={u.isActive ? 'Deactivate account' : 'Reactivate account'}
+          >
+            {u.isActive ? <><UserX className="size-4" /> Deactivate</> : <><UserCheck className="size-4" /> Reactivate</>}
+          </Button>
+        </div>
       ),
     },
   ];

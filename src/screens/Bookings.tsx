@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { toast } from 'sonner';
+import { Eye, MoreHorizontal, RotateCcw, Check } from 'lucide-react';
 import { adminApi, formatINR } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
@@ -8,7 +10,14 @@ import { DataTable, type Column } from '../components/DataTable';
 import { SearchInput, fmtDateTime } from '../components/common';
 import { FilterSelect } from '../components/FilterSelect';
 import { StatusBadge } from '../components/StatusBadge';
-import type { Booking } from '../lib/types';
+import { Button } from '../components/ui/button';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuLabel, DropdownMenuSeparator,
+} from '../components/ui/dropdown-menu';
+import type { Booking, BookingStatus } from '../lib/types';
+
+const STATUSES: BookingStatus[] = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
 export function Bookings() {
   const navigate = useNavigate();
@@ -16,10 +25,22 @@ export function Bookings() {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
 
-  const { data, loading } = useApi(
+  const { data, loading, refetch } = useApi(
     () => adminApi.bookings.list({ q, status: status === 'all' ? undefined : status, page }),
     [q, status, page],
   );
+
+  const setBookingStatus = async (b: Booking, next: BookingStatus) => {
+    if (next === b.status) return;
+    await adminApi.bookings.setStatus(b.id, next);
+    toast.success(`Booking marked ${next.replace('_', ' ').toLowerCase()}`);
+    refetch();
+  };
+  const refund = async (b: Booking) => {
+    await adminApi.bookings.refund(b.id);
+    toast.success('Refund issued');
+    refetch();
+  };
 
   const columns: Column<Booking>[] = [
     { key: 'id', header: 'ID', cell: (b) => <span className="text-xs font-mono text-muted-foreground">#{b.id}</span> },
@@ -38,6 +59,52 @@ export function Bookings() {
     { key: 'amount', header: 'Amount', cell: (b) => <span className="text-sm font-medium">{formatINR(b.amount)}</span> },
     { key: 'pay', header: 'Payment', cell: (b) => <StatusBadge status={b.paymentStatus} /> },
     { key: 'status', header: 'Status', cell: (b) => <StatusBadge status={b.status} /> },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'w-[190px]',
+      cell: (b) => {
+        const refundable = b.paymentStatus === 'PAID';
+        return (
+          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <Button variant="outline" size="sm" className="h-8" onClick={() => navigate(`/bookings/${b.id}`)}>
+              <Eye className="size-4" /> View
+            </Button>
+            {refundable && (
+              <Button variant="outline" size="sm" className="h-8" onClick={() => refund(b)} title="Issue refund">
+                <RotateCcw className="size-4" /> Refund
+              </Button>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8" title="Change status">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Set status</DropdownMenuLabel>
+                {STATUSES.map((s) => (
+                  <DropdownMenuItem
+                    key={s}
+                    onClick={() => setBookingStatus(b, s)}
+                    className={s === 'CANCELLED' ? 'text-destructive focus:text-destructive' : ''}
+                  >
+                    {s.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                    {b.status === s && <Check className="size-4 ml-auto text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+                {!refundable && b.paymentStatus === 'REFUNDED' && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled>Already refunded</DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    },
   ];
 
   return (
