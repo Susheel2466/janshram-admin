@@ -5,7 +5,7 @@ import { adminApi, formatINR, rupeesToPaise } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
-import { SearchInput, UserCell, fmtDateTime } from '../components/common';
+import { SearchInput, UserCell, PhoneLink, fmtDateTime } from '../components/common';
 import { FilterSelect } from '../components/FilterSelect';
 import { StatusBadge } from '../components/StatusBadge';
 import { Button } from '../components/ui/button';
@@ -55,7 +55,7 @@ function Balances() {
   };
 
   const columns: Column<Wallet>[] = [
-    { key: 'user', header: 'User', cell: (w) => <UserCell name={w.user?.name} sub={w.user?.phone} avatar={w.user?.avatar} /> },
+    { key: 'user', header: 'User', cell: (w) => <UserCell name={w.user?.name} sub={<PhoneLink phone={w.user?.phone} />} avatar={w.user?.avatar} /> },
     { key: 'balance', header: 'Balance', cell: (w) => <span className="text-base font-semibold">{formatINR(w.balance)}</span> },
     { key: 'txns', header: 'Transactions', cell: (w) => <span className="text-sm text-muted-foreground">{w.transactions?.length ?? 0}</span> },
     {

@@ -113,6 +113,22 @@ export function Settings() {
                   <Switch checked={form.maintenanceMode}
                     onCheckedChange={(v) => setField('maintenanceMode', v)} />
                 </div>
+                <div className="flex items-center justify-between sm:col-span-2">
+                  <div>
+                    <Label>SMS alerts</Label>
+                    <p className="text-xs text-muted-foreground">Text users on bookings, payments, bids & chat messages</p>
+                  </div>
+                  <Switch checked={form.smsBookingAlerts}
+                    onCheckedChange={(v) => setField('smsBookingAlerts', v)} />
+                </div>
+                <div className="flex items-center justify-between sm:col-span-2">
+                  <div>
+                    <Label>WhatsApp alerts</Label>
+                    <p className="text-xs text-muted-foreground">Send the same updates over WhatsApp</p>
+                  </div>
+                  <Switch checked={form.whatsappBookingAlerts}
+                    onCheckedChange={(v) => setField('whatsappBookingAlerts', v)} />
+                </div>
                 <div className="sm:col-span-2">
                   <Button onClick={save} disabled={saving}>
                     {saving ? <><Loader2 className="size-4 animate-spin" /> Saving…</> : 'Save configuration'}

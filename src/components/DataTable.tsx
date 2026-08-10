@@ -46,7 +46,12 @@ export function DataTable<T>({
       {toolbar && <div className="p-3 border-b bg-muted/30">{toolbar}</div>}
 
       <div className="overflow-x-auto">
-        <Table>
+        {/* `w-full` alone lets the table shrink to the container and squeeze its
+            columns until the trailing action buttons are clipped by the card's
+            overflow-hidden — unreachable, with nothing to scroll because the
+            table never actually overflows. min-w-max keeps it at its natural
+            width so this wrapper can scroll instead. */}
+        <Table className="min-w-max">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               {columns.map((col) => (

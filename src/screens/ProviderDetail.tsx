@@ -5,7 +5,7 @@ import { BadgeCheck } from 'lucide-react';
 import { adminApi, formatINR } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { BackLink, Field } from '../components/detail';
-import { UserCell, Stars, fmtDate } from '../components/common';
+import { UserCell, Stars, PhoneLink, fmtDate } from '../components/common';
 import { StatusBadge } from '../components/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -78,7 +78,7 @@ export function ProviderDetail() {
           <CardHeader><CardTitle className="text-base">Profile</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
             <div>
-              <Field label="Phone" value={p.user?.phone} />
+              <Field label="Phone" value={<PhoneLink phone={p.user?.phone} />} />
               <Field label="Business type" value={p.businessType} />
               <Field label="Experience" value={`${p.experience} years`} />
               <Field label="Completed jobs" value={p.completedJobs} />
@@ -163,7 +163,14 @@ export function ProviderDetail() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Recent Reviews</CardTitle></CardHeader>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base">Recent Reviews</CardTitle>
+            {(p.reviewCount ?? 0) > 0 && (
+              <Link to={`/reviews?providerId=${p.id}`} className="text-sm text-primary hover:underline">
+                View all {p.reviewCount}
+              </Link>
+            )}
+          </CardHeader>
           <CardContent className="space-y-3">
             {(p.reviews?.length ?? 0) === 0 && <p className="text-sm text-muted-foreground py-2">No reviews yet.</p>}
             {p.reviews?.map((r) => (

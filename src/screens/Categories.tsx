@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { adminApi } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
-import { CategoryIcon, IconPicker } from '../components/CategoryIcon';
+import { CategoryIcon, IconPicker, IconUpload, isCustomIcon } from '../components/CategoryIcon';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -13,6 +13,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '../components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -26,9 +27,16 @@ export function Categories() {
   const [toDelete, setToDelete] = useState<Category | null>(null);
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('wrench');
+  const [iconTab, setIconTab] = useState<'library' | 'custom'>('library');
 
-  const openCreate = () => { setEditing(null); setName(''); setIcon('wrench'); setOpen(true); };
-  const openEdit = (c: Category) => { setEditing(c); setName(c.name); setIcon(c.icon ?? 'wrench'); setOpen(true); };
+  const openCreate = () => {
+    setEditing(null); setName(''); setIcon('wrench'); setIconTab('library'); setOpen(true);
+  };
+  const openEdit = (c: Category) => {
+    setEditing(c); setName(c.name); setIcon(c.icon ?? 'wrench');
+    setIconTab(isCustomIcon(c.icon) ? 'custom' : 'library');
+    setOpen(true);
+  };
 
   const save = async () => {
     if (!name.trim()) return toast.error('Name is required');
@@ -97,13 +105,29 @@ export function Categories() {
               <div className="flex items-center gap-2">
                 <Label>Icon</Label>
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                  <span className="size-6 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                  <span className="size-6 rounded-md bg-primary/10 text-primary flex items-center justify-center overflow-hidden">
                     <CategoryIcon icon={icon} className="size-3.5" />
                   </span>
-                  {icon}
+                  {isCustomIcon(icon) ? 'custom image' : icon}
                 </span>
               </div>
-              <IconPicker value={icon} onChange={setIcon} />
+              <Tabs value={iconTab} onValueChange={(v) => setIconTab(v as 'library' | 'custom')}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="library" className="flex-1">Icon library</TabsTrigger>
+                  <TabsTrigger value="custom" className="flex-1">Custom image</TabsTrigger>
+                </TabsList>
+                <TabsContent value="library" className="mt-3">
+                  <IconPicker value={isCustomIcon(icon) ? '' : icon} onChange={setIcon} />
+                  {isCustomIcon(icon) && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      A custom image is set — picking a library icon here replaces it.
+                    </p>
+                  )}
+                </TabsContent>
+                <TabsContent value="custom" className="mt-3">
+                  <IconUpload value={icon} onChange={setIcon} />
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
           <DialogFooter>

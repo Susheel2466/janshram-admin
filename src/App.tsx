@@ -34,8 +34,11 @@ const Referrals = named(() => import('./screens/Referrals'), 'Referrals');
 const Payouts = named(() => import('./screens/Payouts'), 'Payouts');
 const Coupons = named(() => import('./screens/Coupons'), 'Coupons');
 const Notifications = named(() => import('./screens/Notifications'), 'Notifications');
+const Messages = named(() => import('./screens/Messages'), 'Messages');
 const Conversations = named(() => import('./screens/Conversations'), 'Conversations');
 const Tickets = named(() => import('./screens/Tickets'), 'Tickets');
+const Faqs = named(() => import('./screens/Faqs'), 'Faqs');
+const LegalPages = named(() => import('./screens/LegalPages'), 'LegalPages');
 const Settings = named(() => import('./screens/Settings'), 'Settings');
 const AuditLog = named(() => import('./screens/AuditLog'), 'AuditLog');
 const LoginAudit = named(() => import('./screens/LoginAudit'), 'LoginAudit');
@@ -84,8 +87,11 @@ export default function App() {
                 <Route path="/payouts" element={<Payouts />} />
                 <Route path="/coupons" element={<Coupons />} />
                 <Route path="/notifications" element={<Notifications />} />
+                <Route path="/messages" element={<Messages />} />
                 <Route path="/conversations" element={<Conversations />} />
               <Route path="/tickets" element={<Tickets />} />
+                <Route path="/faqs" element={<Faqs />} />
+                <Route path="/legal" element={<LegalPages />} />
                 <Route path="/settings" element={<Settings />} />
               <Route path="/audit" element={<AuditLog />} />
               <Route path="/login-audit" element={<LoginAudit />} />

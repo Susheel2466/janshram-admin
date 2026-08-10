@@ -34,25 +34,31 @@ const buttonVariants = cva(
   },
 );
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
+type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
-  }) {
+  };
+
+// forwardRef is load-bearing, not cosmetic. Radix's `asChild` triggers
+// (DropdownMenuTrigger, TooltipTrigger, PopoverTrigger) attach a ref to their
+// child and use that node as the popper's positioning reference. A plain
+// function component silently drops the ref, so Radix has no reference to
+// measure and the menu stays parked at its pre-position placeholder
+// (translate(0, -200%)) — off-screen and unusable.
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { className, variant, size, asChild = false, ...props },
+  ref,
+) {
   const Comp = asChild ? Slot : "button";
 
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   );
-}
+});
 
 export { Button, buttonVariants };

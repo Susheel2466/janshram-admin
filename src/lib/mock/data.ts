@@ -7,7 +7,7 @@ import type {
   WalletTransaction, Review, Notification, Coupon, Conversation, ChatMessage,
   AuditLogEntry, BookingStatus, TenderStatus, PaymentMethod, PaymentStatus,
   Address, Favorite, SupportTicket, TicketMessage, TicketStatus, TicketPriority,
-  TicketCategory, Payout, OtpLogEntry,
+  TicketCategory, Payout, OtpLogEntry, Faq, LegalPage, MessageLog,
 } from '../types';
 
 const rupees = (r: number) => r * 100;
@@ -330,6 +330,65 @@ export const coupons: Coupon[] = [
   { id: 'cp4', code: 'WELCOME15', description: '15% off for new users', discountType: 'PERCENT', discountValue: 15, maxDiscount: rupees(250), minOrder: rupees(600), active: true, expiresAt: null, createdAt: daysAgo(45), redemptions: 210 },
 ];
 
+// Help-centre FAQs. Seeded as ALL (shown to both apps) plus a couple of
+// role-scoped entries so the audience filter is visible in the console.
+export const faqs: Faq[] = [
+  { id: 'f1', question: 'How do I book a service?', answer: 'Browse services, select a provider, choose date & time, and proceed to payment. You will receive a confirmation once the booking is complete.', audience: 'ALL', order: 1, isActive: true, createdAt: daysAgo(60), updatedAt: daysAgo(60) },
+  { id: 'f2', question: 'Can I cancel or reschedule a booking?', answer: 'Yes, you can cancel or reschedule up to 2 hours before the scheduled time. Go to My Bookings and select the booking you want to modify.', audience: 'CUSTOMER', order: 2, isActive: true, createdAt: daysAgo(60), updatedAt: daysAgo(30) },
+  { id: 'f3', question: 'What payment methods are accepted?', answer: 'We accept UPI, Credit/Debit Cards, Wallet, and Cash on Service. All online payments are 100% secure.', audience: 'ALL', order: 3, isActive: true, createdAt: daysAgo(55), updatedAt: daysAgo(55) },
+  { id: 'f4', question: 'How do I add money to my wallet?', answer: 'Go to Wallet section from your profile, click "Add Money", enter amount and complete payment using your preferred method.', audience: 'ALL', order: 4, isActive: true, createdAt: daysAgo(50), updatedAt: daysAgo(50) },
+  { id: 'f5', question: 'Are service providers verified?', answer: 'Yes, all service providers undergo background verification and skill assessment before being listed on our platform.', audience: 'CUSTOMER', order: 5, isActive: true, createdAt: daysAgo(45), updatedAt: daysAgo(45) },
+  { id: 'f6', question: 'How do I raise a complaint?', answer: 'You can raise a complaint through the Help & Support section or contact our customer care directly. We aim to resolve all issues within 24 hours.', audience: 'ALL', order: 6, isActive: true, createdAt: daysAgo(40), updatedAt: daysAgo(40) },
+  { id: 'f7', question: 'How do I get my provider profile verified?', answer: 'Upload your ID and address proof from Profile → Verification. Our team reviews submissions within 48 hours and you will be notified once approved.', audience: 'PROVIDER', order: 7, isActive: true, createdAt: daysAgo(35), updatedAt: daysAgo(35) },
+  { id: 'f8', question: 'How do I withdraw my earnings?', answer: 'Open Earnings → Withdraw, choose an amount and confirm. Payouts are processed to your registered bank account.', audience: 'PROVIDER', order: 8, isActive: false, createdAt: daysAgo(30), updatedAt: daysAgo(5) },
+];
+
+// Legal documents behind the apps' Help & Support "Quick Links". Content here
+// is abridged — the real copy lives in the database and is edited in the
+// console; these exist so mock mode renders a realistic screen.
+export const legalPages: LegalPage[] = [
+  {
+    id: 'lp1',
+    slug: 'terms',
+    title: 'Terms & Conditions',
+    content: `## Acceptance of terms\nBy creating a JanShram account or booking a service through the platform, you agree to these terms.\n\n## Our role\nJanShram is a marketplace that connects customers with independent service providers.\n\n## Bookings and payments\n- Prices shown at checkout include the service charge, platform fee and applicable GST.\n- A booking can be cancelled or rescheduled as described in the Refund Policy.`,
+    order: 1,
+    isActive: true,
+    createdAt: daysAgo(120),
+    updatedAt: daysAgo(14),
+  },
+  {
+    id: 'lp2',
+    slug: 'privacy',
+    title: 'Privacy Policy',
+    content: `## What we collect\n- Account details: name, phone number, email and profile photo.\n- Location, when you share it, so we can show nearby providers.\n\n## How we use it\nTo operate the service, keep the platform safe, and send booking updates.\n\n## Your choices\nYou can edit your profile, control notification preferences, and request account deletion from Settings.`,
+    order: 2,
+    isActive: true,
+    createdAt: daysAgo(120),
+    updatedAt: daysAgo(14),
+  },
+  {
+    id: 'lp3',
+    slug: 'refund',
+    title: 'Refund Policy',
+    content: `## Cancellations\n- Cancel more than 2 hours before the slot: full refund.\n- Cancel within 2 hours: the platform fee may be retained.\n\n## Refund timelines\nOnline payments are returned to the original payment method within 5–7 working days.`,
+    order: 3,
+    isActive: true,
+    createdAt: daysAgo(120),
+    updatedAt: daysAgo(40),
+  },
+  {
+    id: 'lp4',
+    slug: 'community-guidelines',
+    title: 'Community Guidelines',
+    content: `## Respect comes first\nCustomers and providers are expected to communicate politely.\n\n## Honest listings and reviews\nReviews must reflect a real, completed booking.\n\n## Reporting\nUse Help & Support to report anything that breaks these guidelines.`,
+    order: 4,
+    isActive: true,
+    createdAt: daysAgo(120),
+    updatedAt: daysAgo(60),
+  },
+];
+
 // Notifications (broadcast history / recent per-user).
 export const notifications: Notification[] = [
   { id: 'n1', type: 'SYSTEM', title: 'Monsoon Sale Live!', body: 'Flat 20% off on all cleaning services this week.', read: false, createdAt: daysAgo(1) },
@@ -485,4 +544,39 @@ export const otpLogs: OtpLogEntry[] = users.slice(0, 14).map((u, i) => {
     userName: u.name,
     userRole: u.role,
   };
+});
+
+// Outbound SMS / WhatsApp delivery log. Mirrors what the backend records for
+// every alert: the sends, the failures, and the skips with their reason.
+export const messageLogs: MessageLog[] = users.slice(0, 9).flatMap((u, i) => {
+  const event = (
+    ['booking.confirmed', 'booking.created.provider', 'chat.message', 'payment.received.customer', 'booking.reminder.customer'] as const
+  )[i % 5];
+  const body = {
+    'booking.confirmed': 'Booking #4F9A2C confirmed. Aman will arrive on 12 Aug 2026, 4:00 pm for Deep Cleaning.',
+    'booking.created.provider': 'New booking #7B1D0E: Pipe Repair for Priya Sharma on 13 Aug 2026, 11:00 am. Amount ₹850.',
+    'chat.message': 'Priya Sharma sent you a message on JanShram: "Are you free on Monday?". Open the app to reply.',
+    'payment.received.customer': 'Payment of ₹1,200 received for booking #22C8A1. Thank you — JanShram.',
+    'booking.reminder.customer': 'Reminder: Aman is due on 12 Aug 2026, 4:00 pm for Deep Cleaning, booking #4F9A2C.',
+  }[event];
+  // Two rows per alert — one per channel — with the odd failure and skip.
+  const failed = i === 2;
+  const skipped = i === 5;
+  return (['SMS', 'WHATSAPP'] as const).map((channel, c) => ({
+    id: `ml${i}${c}`,
+    channel,
+    status: failed ? ('FAILED' as const) : skipped ? ('SKIPPED' as const) : ('SENT' as const),
+    to: (u.phone || '').replace(/\D/g, '').slice(-10),
+    event,
+    refId: `bk${i}`,
+    body,
+    error: failed
+      ? 'HTTP 400: invalid recipient number'
+      : skipped
+        ? 'User opted out (notifyBookings)'
+        : null,
+    userId: u.id,
+    createdAt: daysAgo(i * 0.3),
+    user: { id: u.id, name: u.name, phone: u.phone, role: u.role },
+  }));
 });

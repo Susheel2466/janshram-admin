@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Search } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from './ui/utils';
@@ -25,6 +26,47 @@ export function SearchInput({
         className="pl-9 bg-background"
       />
     </div>
+  );
+}
+
+// Indian mobiles are stored as bare 10 digits; a `tel:` link needs the country
+// code to reach the OS dialler (or Skype/FaceTime/a softphone on desktop).
+export function toDialable(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const trimmed = phone.trim();
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length < 10) return null;
+  if (trimmed.startsWith('+')) return `+${digits}`;
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 11 && digits.startsWith('0')) return `+91${digits.slice(1)}`;
+  return `+${digits}`;
+}
+
+/**
+ * A phone number rendered as a click-to-call link. Falls back to plain text
+ * when the number is missing or too short to dial.
+ *
+ * The console is used on desktop, where `tel:` only works if something is
+ * registered for it — so the click also copies the number, leaving the admin
+ * able to dial by hand instead of wondering why nothing happened.
+ */
+export function PhoneLink({ phone, className }: { phone: string | null | undefined; className?: string }) {
+  const dialable = toDialable(phone);
+  if (!phone) return <span className={className}>—</span>;
+  if (!dialable) return <span className={className}>{phone}</span>;
+  return (
+    <a
+      href={`tel:${dialable}`}
+      onClick={(e) => {
+        e.stopPropagation(); // don't trigger the surrounding row link
+        navigator.clipboard?.writeText(dialable).catch(() => {});
+        toast.info(`${dialable} copied — opening your calling app`);
+      }}
+      className={cn('hover:text-foreground hover:underline underline-offset-2', className)}
+      title={`Call ${dialable}`}
+    >
+      {phone}
+    </a>
   );
 }
 

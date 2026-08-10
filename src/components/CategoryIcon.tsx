@@ -1,13 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { DynamicIcon, iconNames, type IconName } from 'lucide-react/dynamic';
-import { Shapes, Search } from 'lucide-react';
+import { Shapes, Search, Upload, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from './ui/input';
+import { Button } from './ui/button';
 
 // All ~1600 lucide icon names, for search + validation. `iconNames` is a plain
 // string array, so importing it is cheap — DynamicIcon lazy-loads the actual
 // icon component only when rendered.
 const ALL_ICONS = iconNames as unknown as string[];
 const VALID = new Set<string>(ALL_ICONS);
+
+// A category icon is EITHER a lucide icon name ("wrench") or a custom image the
+// admin uploaded. Custom images are stored inline as a data URI in the same
+// `Category.icon` column — small (~5-10KB at 96px), needs no object storage, and
+// works identically in dev and prod. `https://` is also accepted so the column
+// can hold a CDN URL if uploads are moved to R2 later.
+export function isCustomIcon(icon?: string | null): boolean {
+  if (!icon) return false;
+  return icon.startsWith('data:image/') || icon.startsWith('http://') || icon.startsWith('https://');
+}
 
 // Normalizes a stored icon name — legacy PascalCase ("Wrench") or kebab-case
 // ("air-vent", "flower-2") — to the kebab-case DynamicIcon expects.
@@ -20,11 +32,132 @@ export function toIconName(name?: string | null): string {
     .toLowerCase();
 }
 
-// Renders any lucide icon by (possibly legacy) name, with a graceful fallback.
+// Renders a category icon — custom upload or lucide name — with a graceful
+// fallback. `className` carries the sizing, so custom images use object-contain
+// to sit correctly inside whatever box the caller provides.
 export function CategoryIcon({ icon, className = 'size-5' }: { icon?: string | null; className?: string }) {
+  if (isCustomIcon(icon)) {
+    return <img src={icon!} alt="" className={`${className} object-contain`} loading="lazy" />;
+  }
   const name = toIconName(icon);
   if (!VALID.has(name)) return <Shapes className={className} />;
   return <DynamicIcon name={name as IconName} className={className} fallback={() => <Shapes className={className} />} />;
+}
+
+// ───────────────────────── Custom image upload ─────────────────────────
+
+const ICON_PX = 96;                          // stored icons are square, 96×96
+const MAX_SOURCE_BYTES = 4 * 1024 * 1024;    // reject huge source files up front
+const MAX_STORED_BYTES = 256 * 1024;         // safety net on the encoded result
+const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'image/gif'];
+
+// Downscales any uploaded image to a square ICON_PX PNG data URI, preserving
+// aspect ratio (letterboxed, transparent padding) so non-square logos aren't
+// stretched. Rasterizing everything — including SVG — keeps rendering uniform
+// and avoids storing markup that would later be inlined into the app.
+export async function fileToIconDataUri(file: File, px = ICON_PX): Promise<string> {
+  const sourceUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('Could not read that file'));
+    reader.readAsDataURL(file);
+  });
+
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error('That file is not a readable image'));
+    el.src = sourceUrl;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = px;
+  canvas.height = px;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas is not available in this browser');
+
+  // SVGs can report a zero intrinsic size; fall back to a square box.
+  const iw = img.naturalWidth || img.width || px;
+  const ih = img.naturalHeight || img.height || px;
+
+  const scale = Math.min(px / iw, px / ih);
+  const w = Math.max(1, Math.round(iw * scale));
+  const h = Math.max(1, Math.round(ih * scale));
+  ctx.drawImage(img, Math.round((px - w) / 2), Math.round((px - h) / 2), w, h);
+
+  return canvas.toDataURL('image/png');
+}
+
+// File picker + live preview for a custom category icon.
+export function IconUpload({ value, onChange }: { value: string; onChange: (icon: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const custom = isCustomIcon(value);
+
+  const pick = async (file?: File) => {
+    if (!file) return;
+    if (!ACCEPTED.includes(file.type)) {
+      return toast.error('Use a PNG, JPG, WEBP, GIF or SVG image');
+    }
+    if (file.size > MAX_SOURCE_BYTES) {
+      return toast.error('That image is over 4MB — pick a smaller one');
+    }
+    setBusy(true);
+    try {
+      const uri = await fileToIconDataUri(file);
+      if (uri.length > MAX_STORED_BYTES) {
+        return toast.error('That image is too detailed to store — try a simpler icon');
+      }
+      onChange(uri);
+      toast.success('Custom icon ready — save the category to apply it');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not process that image');
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = ''; // allow re-picking the same file
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4 rounded-lg border border-dashed p-4">
+        <div className="size-16 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 overflow-hidden">
+          {busy ? <Loader2 className="size-5 animate-spin" /> : <CategoryIcon icon={value} className="size-8" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">{custom ? 'Custom image' : 'No custom image'}</p>
+          <p className="text-xs text-muted-foreground">
+            {custom
+              ? 'Shown in the app in place of a library icon.'
+              : `PNG, JPG, WEBP, GIF or SVG — resized to ${ICON_PX}×${ICON_PX}.`}
+          </p>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => inputRef.current?.click()}>
+            <Upload className="size-4" /> {custom ? 'Replace' : 'Upload'}
+          </Button>
+          {custom && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => onChange('wrench')}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED.join(',')}
+        className="hidden"
+        onChange={(e) => pick(e.target.files?.[0])}
+      />
+    </div>
+  );
 }
 
 // Searchable grid picker over the full lucide icon set. Value/onChange use the

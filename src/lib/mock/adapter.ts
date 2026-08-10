@@ -3,12 +3,14 @@
 // loading states. Mutations persist for the session (module-level arrays).
 
 import * as db from './data';
+import type { UploadFolder } from '../upload';
 import type {
   User, ProviderProfile, Service, Booking, Tender, Wallet, WalletTransaction,
   Review, Coupon, Notification, Conversation, Category, DashboardStats,
   TimeseriesPoint, CategoryBreakdown, AuditLogEntry, Paginated, BookingStatus,
   AdminProfile, Address, Favorite, PaymentRecord, ReferralRow, PaymentStatus,
-  TicketMessage, TicketStatus, TicketPriority, PlatformSettings,
+  TicketMessage, TicketStatus, TicketPriority, TicketAssignee, PlatformSettings, Faq, FaqAudience, PresignResult,
+  LegalPage, SupportTicket, TicketCategory, ChatMessage,
 } from '../types';
 
 const delay = <T>(value: T, ms = 220): Promise<T> =>
@@ -30,6 +32,14 @@ function paginate<T>(rows: T[], page = 1, limit = 10): Paginated<T> {
 }
 
 const norm = (s: string | null | undefined) => (s ?? '').toLowerCase();
+
+// The mock session's support staff. db.users holds only customers and
+// providers, so ticket assignment resolves against this list instead. The first
+// entry is "you" — the admin the mock session is logged in as.
+const MOCK_ADMINS: TicketAssignee[] = [
+  { id: 'admin1', name: 'Platform Admin', email: 'admin@janshram.in', avatar: null },
+  { id: 'admin2', name: 'Priya Support', email: 'priya@janshram.in', avatar: null },
+];
 
 // ── Dashboard ──
 function dashboardStats(): DashboardStats {
@@ -112,6 +122,13 @@ function categoryBreakdown(): CategoryBreakdown[] {
 }
 
 // ── The adapter object ──
+// The real backend refuses deletes that would destroy financial or dispute
+// history, and rejects duplicate identities. Mirroring those rules here keeps
+// mock mode honest — otherwise the demo teaches behaviour the API won't allow.
+function refuse(message: string): never {
+  throw new Error(message);
+}
+
 export const mockAdapter = {
   auth: {
     login: (email: string, _password: string) => {
@@ -139,6 +156,55 @@ export const mockAdapter = {
   },
 
   users: {
+    create: (data: {
+      phone: string; name?: string; email?: string;
+      role?: 'CUSTOMER' | 'PROVIDER' | 'ADMIN'; city?: string; area?: string; password?: string;
+    }) => {
+      // Seeded mock phones are display-formatted ("+91 98765 43210") while the
+      // form submits bare digits, so compare on digits only — otherwise this
+      // check silently never matches.
+      const digits = (v: string) => v.replace(/\D/g, '').slice(-10);
+      if (db.users.some((u) => digits(u.phone) === digits(data.phone))) {
+        refuse('This mobile number is already registered');
+      }
+      if (data.email && db.users.some((u) => u.email?.toLowerCase() === data.email!.toLowerCase())) {
+        refuse('This email is already registered with another account');
+      }
+      const now = new Date().toISOString();
+      const user: User = {
+        id: `u${Date.now()}`,
+        phone: data.phone,
+        name: data.name ?? null,
+        email: data.email ?? null,
+        role: data.role ?? 'CUSTOMER',
+        avatar: null,
+        city: data.city ?? null,
+        area: data.area ?? null,
+        lat: null,
+        lng: null,
+        referralCode: `SEVA${data.phone.slice(-6)}`,
+        isActive: true,
+        notifyBookings: true,
+        notifyPromotions: true,
+        notifyReminders: true,
+        notifyChat: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+      db.users.unshift(user);
+      return delay({ user });
+    },
+    remove: (id: string) => {
+      const bookings = db.bookings.filter((b) => b.customerId === id).length;
+      const reviews = db.reviews.filter((r) => r.authorId === id).length;
+      const blockers = [bookings && `${bookings} booking(s)`, reviews && `${reviews} review(s)`].filter(Boolean);
+      if (blockers.length) {
+        refuse(`This account has ${blockers.join(', ')} attached. Deactivate it instead so that history is kept.`);
+      }
+      const i = db.users.findIndex((x) => x.id === id);
+      if (i >= 0) db.users.splice(i, 1);
+      return delay({ ok: true as const });
+    },
     list: (params: ListParams = {}) => {
       let rows = [...db.users];
       if (params.role) rows = rows.filter((u) => u.role === params.role);
@@ -167,6 +233,26 @@ export const mockAdapter = {
   },
 
   providers: {
+    update: (id: string, patch: Partial<ProviderProfile> & { priceFromRupees?: number }) => {
+      const p = db.providers.find((x) => x.id === id);
+      if (p) {
+        const { priceFromRupees, ...rest } = patch;
+        Object.assign(p, rest);
+        if (priceFromRupees !== undefined) p.priceFrom = Math.round(priceFromRupees * 100);
+      }
+      return delay({ provider: p! });
+    },
+    remove: (id: string) => {
+      const jobs = db.bookings.filter((b) => b.providerId === id).length;
+      const reviews = db.reviews.filter((r) => r.providerId === id).length;
+      const blockers = [jobs && `${jobs} booking(s)`, reviews && `${reviews} review(s)`].filter(Boolean);
+      if (blockers.length) {
+        refuse(`This provider has ${blockers.join(' and ')} on record. Mark them unavailable or deactivate the account instead.`);
+      }
+      const i = db.providers.findIndex((x) => x.id === id);
+      if (i >= 0) db.providers.splice(i, 1);
+      return delay({ ok: true as const });
+    },
     list: (params: ListParams = {}) => {
       let rows = [...db.providers];
       if (params.verified === 'yes') rows = rows.filter((p) => p.isVerified);
@@ -282,6 +368,62 @@ export const mockAdapter = {
   },
 
   bookings: {
+    create: (data: {
+      customerId: string; providerId: string; serviceId?: string; scheduledAt: string;
+      address?: string; notes?: string; amountRupees?: number; couponCode?: string;
+      paymentMethod?: Booking['paymentMethod']; status?: BookingStatus; paymentStatus?: PaymentStatus;
+    }) => {
+      const customer = db.users.find((u) => u.id === data.customerId);
+      const booking: Booking = {
+        id: `b${Date.now()}`,
+        status: data.status ?? 'PENDING',
+        scheduledAt: data.scheduledAt,
+        address: data.address ?? null,
+        notes: data.notes ?? null,
+        photos: [],
+        // Blank amount means "use the standard price", which the backend derives
+        // from the shared quote helper. Approximate it here so mock mode doesn't
+        // show a ₹0 booking: service (or provider base) price + platform fee.
+        amount:
+          data.amountRupees !== undefined
+            ? Math.round(data.amountRupees * 100)
+            : (db.services.find((x) => x.id === data.serviceId)?.price ??
+               db.providers.find((x) => x.id === data.providerId)?.priceFrom ??
+               0) + 3000,
+        discount: 0,
+        couponCode: data.couponCode ?? null,
+        paymentMethod: data.paymentMethod ?? null,
+        paymentStatus: data.paymentStatus ?? 'PENDING',
+        cancelledAt: null,
+        cancelReason: null,
+        completedAt: null,
+        createdAt: new Date().toISOString(),
+        customerId: data.customerId,
+        providerId: data.providerId,
+        serviceId: data.serviceId ?? null,
+        service: db.services.find((x) => x.id === data.serviceId) ?? null,
+        provider: db.providers.find((x) => x.id === data.providerId),
+        customer: customer && { id: customer.id, name: customer.name, avatar: customer.avatar, phone: customer.phone },
+      };
+      db.bookings.unshift(booking);
+      return delay({ booking });
+    },
+    update: (id: string, patch: Partial<Booking> & { amountRupees?: number }) => {
+      const b = db.bookings.find((x) => x.id === id);
+      if (b) {
+        const { amountRupees, ...rest } = patch;
+        Object.assign(b, rest);
+        if (amountRupees !== undefined) b.amount = Math.round(amountRupees * 100);
+      }
+      return delay({ booking: b! });
+    },
+    remove: (id: string) => {
+      const b = db.bookings.find((x) => x.id === id);
+      if (b?.paymentStatus === 'PAID') refuse('This booking has been paid. Refund it first, then delete.');
+      const i = db.bookings.findIndex((x) => x.id === id);
+      if (i >= 0) db.bookings.splice(i, 1);
+      return delay({ ok: true as const });
+    },
     list: (params: ListParams = {}) => {
       let rows = [...db.bookings];
       if (params.status) rows = rows.filter((b) => b.status === params.status);
@@ -310,6 +452,21 @@ export const mockAdapter = {
   },
 
   tenders: {
+    update: (id: string, patch: Partial<Tender> & { budgetMinRupees?: number; budgetMaxRupees?: number }) => {
+      const t = db.tenders.find((x) => x.id === id);
+      if (t) {
+        const { budgetMinRupees, budgetMaxRupees, ...rest } = patch;
+        Object.assign(t, rest);
+        if (budgetMinRupees !== undefined) t.budgetMin = Math.round(budgetMinRupees * 100);
+        if (budgetMaxRupees !== undefined) t.budgetMax = Math.round(budgetMaxRupees * 100);
+      }
+      return delay({ tender: t! });
+    },
+    remove: (id: string) => {
+      const i = db.tenders.findIndex((x) => x.id === id);
+      if (i >= 0) db.tenders.splice(i, 1);
+      return delay({ ok: true as const });
+    },
     list: (params: ListParams = {}) => {
       let rows = [...db.tenders];
       if (params.status) rows = rows.filter((t) => t.status === params.status);
@@ -329,8 +486,14 @@ export const mockAdapter = {
   },
 
   reviews: {
+    update: (id: string, patch: { rating?: number; comment?: string | null }) => {
+      const r = db.reviews.find((x) => x.id === id);
+      if (r) Object.assign(r, patch);
+      return delay({ review: r! });
+    },
     list: (params: ListParams = {}) => {
       let rows = [...db.reviews];
+      if (params.providerId) rows = rows.filter((r) => r.providerId === params.providerId);
       if (params.flagged === 'yes') rows = rows.filter((r) => r.hidden || r.rating <= 2);
       if (params.rating) rows = rows.filter((r) => r.rating === Number(params.rating));
       if (params.q) {
@@ -412,7 +575,94 @@ export const mockAdapter = {
     },
   },
 
+  faqs: {
+    list: () => delay({ faqs: [...db.faqs].sort((a, b) => a.order - b.order) }),
+    create: (data: { question: string; answer: string; audience: FaqAudience; isActive: boolean }) => {
+      // New entries land at the bottom, matching the backend.
+      const order = db.faqs.reduce((max, f) => Math.max(max, f.order), 0) + 1;
+      const now = new Date().toISOString();
+      const faq: Faq = { ...data, id: `f${Date.now()}`, order, createdAt: now, updatedAt: now };
+      db.faqs.push(faq);
+      return delay({ faq });
+    },
+    update: (id: string, patch: Partial<Faq>) => {
+      const f = db.faqs.find((x) => x.id === id);
+      if (f) Object.assign(f, patch, { updatedAt: new Date().toISOString() });
+      return delay({ faq: f! });
+    },
+    remove: (id: string) => {
+      const i = db.faqs.findIndex((x) => x.id === id);
+      if (i >= 0) db.faqs.splice(i, 1);
+      return delay({ ok: true as const });
+    },
+    reorder: (ids: string[]) => {
+      ids.forEach((id, i) => {
+        const f = db.faqs.find((x) => x.id === id);
+        if (f) f.order = i + 1;
+      });
+      return delay({ ok: true as const });
+    },
+  },
+
+  legal: {
+    list: () => delay({ pages: [...db.legalPages].sort((a, b) => a.order - b.order) }),
+    create: (data: { slug: string; title: string; content: string; isActive: boolean }) => {
+      // New pages land at the bottom, matching the backend.
+      const order = db.legalPages.reduce((max, p) => Math.max(max, p.order), 0) + 1;
+      const now = new Date().toISOString();
+      const page: LegalPage = { ...data, id: `lp${Date.now()}`, order, createdAt: now, updatedAt: now };
+      db.legalPages.push(page);
+      return delay({ page });
+    },
+    update: (id: string, patch: Partial<LegalPage>) => {
+      const p = db.legalPages.find((x) => x.id === id);
+      if (p) Object.assign(p, patch, { updatedAt: new Date().toISOString() });
+      return delay({ page: p! });
+    },
+    remove: (id: string) => {
+      const i = db.legalPages.findIndex((x) => x.id === id);
+      if (i >= 0) db.legalPages.splice(i, 1);
+      return delay({ ok: true as const });
+    },
+    reorder: (ids: string[]) => {
+      ids.forEach((id, i) => {
+        const p = db.legalPages.find((x) => x.id === id);
+        if (p) p.order = i + 1;
+      });
+      return delay({ ok: true as const });
+    },
+  },
+
+  // Outbound SMS/WhatsApp delivery log. The mock session has no real sends, so
+  // this returns a small illustrative set rather than an empty table.
+  messages: {
+    list: (params: ListParams = {}) => {
+      let rows = [...db.messageLogs];
+      if (params.channel) rows = rows.filter((m) => m.channel === params.channel);
+      if (params.status) rows = rows.filter((m) => m.status === params.status);
+      if (params.userId) rows = rows.filter((m) => m.userId === params.userId);
+      if (params.q) {
+        const q = norm(params.q as string);
+        rows = rows.filter(
+          (m) => norm(m.to).includes(q) || norm(m.event).includes(q) || norm(m.body).includes(q),
+        );
+      }
+      rows.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      const summary = {
+        sent: db.messageLogs.filter((m) => m.status === 'SENT').length,
+        failed: db.messageLogs.filter((m) => m.status === 'FAILED').length,
+        skipped: db.messageLogs.filter((m) => m.status === 'SKIPPED').length,
+      };
+      return delay({ ...paginate(rows, params.page, params.limit ?? 20), summary, retentionDays: 90 });
+    },
+  },
+
   notifications: {
+    remove: (id: string) => {
+      const i = db.notifications.findIndex((x) => x.id === id);
+      if (i >= 0) db.notifications.splice(i, 1);
+      return delay({ ok: true as const });
+    },
     history: () => delay({ notifications: [...db.notifications] }),
     broadcast: (data: { title: string; body: string; audience: string }) => {
       const n: Notification = {
@@ -429,6 +679,11 @@ export const mockAdapter = {
   },
 
   conversations: {
+    remove: (id: string) => {
+      const i = db.conversations.findIndex((x) => x.id === id);
+      if (i >= 0) db.conversations.splice(i, 1);
+      return delay({ ok: true as const });
+    },
     list: (params: ListParams = {}) => {
       let rows = [...db.conversations];
       if (params.q) {
@@ -439,6 +694,21 @@ export const mockAdapter = {
       return delay(paginate(rows, params.page, params.limit ?? 10));
     },
     get: (id: string) => delay({ conversation: db.conversations.find((c) => c.id === id)! }),
+    reply: (id: string, body: string) => {
+      const convo = db.conversations.find((c) => c.id === id);
+      const message: ChatMessage = {
+        id: `m${Date.now()}`,
+        conversationId: id,
+        senderId: 'admin1',
+        body,
+        attachments: [],
+        createdAt: new Date().toISOString(),
+        fromSupport: true,
+      };
+      convo?.messages?.push(message);
+      if (convo) convo.updatedAt = message.createdAt;
+      return delay({ message });
+    },
   },
 
   // Gateway payments + refunds, derived from bookings that carry a payment.
@@ -490,6 +760,57 @@ export const mockAdapter = {
 
   // Support tickets — triage queue + thread.
   tickets: {
+    create: (data: {
+      requesterId: string; subject: string; message: string;
+      category?: TicketCategory; priority?: TicketPriority; bookingId?: string;
+      attachments?: string[]; assignToMe?: boolean;
+    }) => {
+      const requester = db.users.find((u) => u.id === data.requesterId);
+      const now = new Date().toISOString();
+      // One id, reused below — two Date.now() calls can straddle a millisecond
+      // and leave the opening message pointing at a ticket that doesn't exist.
+      const id = `t${Date.now()}`;
+      const me = MOCK_ADMINS[0];
+      const ticket: SupportTicket = {
+        id,
+        subject: data.subject,
+        category: data.category ?? 'OTHER',
+        status: data.assignToMe ? 'IN_PROGRESS' : 'OPEN',
+        priority: data.priority ?? 'MEDIUM',
+        requesterId: data.requesterId,
+        requester: requester && {
+          id: requester.id, name: requester.name, avatar: requester.avatar,
+          phone: requester.phone, email: requester.email, role: requester.role,
+        },
+        // assignToMe claims it for the logged-in admin, same as the backend.
+        assigneeId: data.assignToMe ? me.id : null,
+        assignee: data.assignToMe ? { id: me.id, name: me.name } : null,
+        bookingId: data.bookingId ?? null,
+        createdAt: now,
+        updatedAt: now,
+        resolvedAt: null,
+        closedAt: null,
+        lastReplyAt: now,
+        messages: [{
+          id: `tm${id}`,
+          ticketId: id,
+          senderId: me.id,
+          fromAdmin: true,
+          body: data.message,
+          attachments: data.attachments ?? [],
+          createdAt: now,
+          sender: { id: me.id, name: me.name, avatar: me.avatar },
+        }],
+        _count: { messages: 1 },
+      };
+      db.tickets.unshift(ticket);
+      return delay({ ticket });
+    },
+    remove: (id: string) => {
+      const i = db.tickets.findIndex((x) => x.id === id);
+      if (i >= 0) db.tickets.splice(i, 1);
+      return delay({ ok: true as const });
+    },
     stats: () => {
       const active = db.tickets.filter((t) => t.status !== 'RESOLVED' && t.status !== 'CLOSED');
       return delay({
@@ -502,11 +823,19 @@ export const mockAdapter = {
         },
       });
     },
+    // Active admins available to own a ticket. The mock has no ADMIN rows in
+    // db.users, so this mirrors the fixed staff list the mock session uses.
+    assignees: () => delay({ assignees: MOCK_ADMINS.map((a) => ({ ...a })) }),
     list: (params: ListParams = {}) => {
       let rows = [...db.tickets];
       if (params.status) rows = rows.filter((t) => t.status === params.status);
       if (params.priority) rows = rows.filter((t) => t.priority === params.priority);
       if (params.category) rows = rows.filter((t) => t.category === params.category);
+      if (params.assigneeId) {
+        rows = params.assigneeId === 'unassigned'
+          ? rows.filter((t) => !t.assigneeId)
+          : rows.filter((t) => t.assigneeId === params.assigneeId);
+      }
       if (params.q) {
         const q = norm(params.q as string);
         rows = rows.filter((t) => norm(t.subject).includes(q) || norm(t.requester?.name).includes(q));
@@ -514,7 +843,13 @@ export const mockAdapter = {
       rows.sort((a, b) => +new Date(b.lastReplyAt) - +new Date(a.lastReplyAt));
       return delay(paginate(rows, params.page, params.limit ?? 10));
     },
-    get: (id: string) => delay({ ticket: db.tickets.find((t) => t.id === id)! }),
+    // Rejects on a missing ticket rather than resolving `{ ticket: undefined }`.
+    // The thread polls this; handing back undefined would blank a thread the
+    // admin is reading into a permanent skeleton instead of leaving it alone.
+    get: (id: string) => {
+      const ticket = db.tickets.find((t) => t.id === id);
+      return ticket ? delay({ ticket }) : Promise.reject(new Error('Ticket not found'));
+    },
     update: (id: string, patch: { status?: TicketStatus; priority?: TicketPriority; assigneeId?: string | null }) => {
       const t = db.tickets.find((x) => x.id === id);
       if (t) {
@@ -525,28 +860,32 @@ export const mockAdapter = {
         }
         if (patch.priority) t.priority = patch.priority;
         if (patch.assigneeId !== undefined) {
-          t.assigneeId = patch.assigneeId;
-          t.assignee = patch.assigneeId ? { id: 'admin1', name: 'Platform Admin' } : null;
+          const staff = MOCK_ADMINS.find((a) => a.id === patch.assigneeId);
+          t.assigneeId = staff ? staff.id : null;
+          t.assignee = staff ? { id: staff.id, name: staff.name } : null;
         }
       }
       return delay({ ticket: t! });
     },
-    reply: (id: string, body: string) => {
+    reply: (id: string, body: string, attachments?: string[]) => {
       const t = db.tickets.find((x) => x.id === id);
+      const me = MOCK_ADMINS[0];
       const msg: TicketMessage = {
         id: `tm_${id}_${Date.now()}`,
         ticketId: id,
-        senderId: 'admin1',
+        senderId: me.id,
         fromAdmin: true,
         body,
+        attachments: attachments ?? [],
         createdAt: new Date().toISOString(),
-        sender: { id: 'admin1', name: 'Platform Admin', avatar: null },
+        sender: { id: me.id, name: me.name, avatar: me.avatar },
       };
       if (t) {
         t.messages = [...(t.messages ?? []), msg];
         t.lastReplyAt = msg.createdAt;
         if (t.status === 'OPEN' || t.status === 'IN_PROGRESS') t.status = 'WAITING';
-        if (!t.assigneeId) { t.assigneeId = 'admin1'; t.assignee = { id: 'admin1', name: 'Platform Admin' }; }
+        // Replying claims an untriaged ticket, same as the real backend.
+        if (!t.assigneeId) { t.assigneeId = me.id; t.assignee = { id: me.id, name: me.name }; }
         t._count = { messages: t.messages.length };
       }
       return delay({ message: msg });
@@ -597,6 +936,8 @@ export const mockAdapter = {
           supportPhone: '+91 1800 000 000',
           providerAutoApproval: false,
           maintenanceMode: false,
+          smsBookingAlerts: true,
+          whatsappBookingAlerts: true,
         },
       }),
     update: (patch: Partial<PlatformSettings>) =>
@@ -608,6 +949,8 @@ export const mockAdapter = {
           supportPhone: '+91 1800 000 000',
           providerAutoApproval: false,
           maintenanceMode: false,
+          smsBookingAlerts: true,
+          whatsappBookingAlerts: true,
           ...patch,
         },
       }),
@@ -633,6 +976,19 @@ export const mockAdapter = {
       rows.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
       return delay(paginate(rows, params.page, params.limit ?? 20));
     },
+  },
+
+  // Nothing is stored in mock mode. Returning a data-less object URL would
+  // break on reload, so we hand back a stable placeholder image instead —
+  // enough for the attachment UI to render and round-trip.
+  uploads: {
+    presign: (folder: UploadFolder, filename: string, _contentType: string) =>
+      delay<PresignResult>({
+        uploadUrl: null,
+        publicUrl: `https://placehold.co/400x300?text=${encodeURIComponent(filename.slice(0, 20))}`,
+        key: `${folder}/mock-${filename}`,
+        mock: true,
+      }),
   },
 
   // Client-side CSV from the in-memory dataset (mirrors the backend export).

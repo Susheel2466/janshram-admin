@@ -7,7 +7,7 @@ import { PageHeader } from '../components/PageHeader';
 import { ExportButton } from '../components/ExportButton';
 import { StatCard } from '../components/StatCard';
 import { DataTable, type Column } from '../components/DataTable';
-import { SearchInput, UserCell, fmtDateTime } from '../components/common';
+import { SearchInput, UserCell, PhoneLink, fmtDateTime } from '../components/common';
 import { FilterSelect } from '../components/FilterSelect';
 import { StatusBadge } from '../components/StatusBadge';
 import { Button } from '../components/ui/button';
@@ -38,7 +38,7 @@ export function Payouts() {
   };
 
   const columns: Column<Payout>[] = [
-    { key: 'provider', header: 'Provider', cell: (p) => <UserCell name={p.provider?.name} sub={p.provider?.phone} avatar={p.provider?.avatar} /> },
+    { key: 'provider', header: 'Provider', cell: (p) => <UserCell name={p.provider?.name} sub={<PhoneLink phone={p.provider?.phone} />} avatar={p.provider?.avatar} /> },
     { key: 'amount', header: 'Amount', cell: (p) => <span className="text-sm font-semibold">{formatINR(p.amount)}</span> },
     { key: 'upi', header: 'UPI', cell: (p) => <span className="text-sm font-mono">{p.upiId ?? '—'}</span> },
     { key: 'status', header: 'Status', cell: (p) => <StatusBadge status={p.status === 'REQUESTED' ? 'PENDING' : p.status === 'PAID' ? 'PAID' : 'FAILED'} /> },

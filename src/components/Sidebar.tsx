@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router';
 import {
   LayoutDashboard, Users, Wrench, LayoutGrid, Briefcase, CalendarCheck,
-  Gavel, Star, WalletMinimal, TicketPercent, Bell, MessagesSquare, Settings,
+  Gavel, Star, WalletMinimal, TicketPercent, Bell, MessagesSquare, MessageSquare, Settings,
   ShieldCheck, BadgeCheck, CreditCard, Gift, LifeBuoy, ScrollText, Banknote, KeyRound,
+  HelpCircle, FileText,
 } from 'lucide-react';
 import { cn } from './ui/utils';
+import { isMock } from '../lib/api';
 
 interface NavItem {
   to: string;
@@ -40,6 +42,8 @@ const sections: { title: string; items: NavItem[] }[] = [
       { to: '/reviews', label: 'Reviews', icon: Star },
       { to: '/tickets', label: 'Support Tickets', icon: LifeBuoy },
       { to: '/conversations', label: 'Support Chats', icon: MessagesSquare },
+      { to: '/faqs', label: 'FAQs', icon: HelpCircle },
+      { to: '/legal', label: 'Legal Pages', icon: FileText },
     ],
   },
   {
@@ -51,6 +55,7 @@ const sections: { title: string; items: NavItem[] }[] = [
       { to: '/coupons', label: 'Coupons', icon: TicketPercent },
       { to: '/referrals', label: 'Referrals', icon: Gift },
       { to: '/notifications', label: 'Notifications', icon: Bell },
+      { to: '/messages', label: 'Message Log', icon: MessageSquare },
     ],
   },
   {
@@ -107,12 +112,17 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </nav>
 
-      <div className="p-3 border-t">
-        <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
-          <div className="font-medium text-foreground mb-0.5">Demo mode</div>
-          Data is in-memory and resets on reload.
+      {/* Only in mock mode. Shown unconditionally this reads as "nothing you do
+          here is permanent", which is dangerously wrong when the console is
+          pointed at a real backend and the actions include deletes. */}
+      {isMock && (
+        <div className="p-3 border-t">
+          <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
+            <div className="font-medium text-foreground mb-0.5">Demo mode</div>
+            Data is in-memory and resets on reload.
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 }

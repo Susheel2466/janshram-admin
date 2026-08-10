@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { MoreHorizontal, BadgeCheck, Eye, CircleSlash, Power, Award, Check, CheckCircle2 } from 'lucide-react';
+import { MoreHorizontal, BadgeCheck, Eye, CircleSlash, Power, Award, Check, CheckCircle2, Pencil, Trash2 } from 'lucide-react';
 import { adminApi, formatINR } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
@@ -15,6 +15,13 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
   DropdownMenuLabel, DropdownMenuSeparator,
 } from '../components/ui/dropdown-menu';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { ConfirmDelete } from '../components/ConfirmDelete';
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '../components/ui/dialog';
 import type { ProviderProfile } from '../lib/types';
 
 const NONE = '__none__';
@@ -23,6 +30,10 @@ const BADGES = [NONE, 'Top Rated', 'Verified Pro', 'Most Booked', 'Premium'];
 export function Providers() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
+  const [editing, setEditing] = useState<ProviderProfile | null>(null);
+  const [form, setForm] = useState({ businessName: '', bio: '', experience: '', priceFrom: '', pricePer: '', city: '', area: '', specialties: '' });
+  const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<ProviderProfile | null>(null);
   const [verified, setVerified] = useState('all');
   const [category, setCategory] = useState('all');
   const [page, setPage] = useState(1);
@@ -60,6 +71,48 @@ export function Providers() {
     await adminApi.users.setActive(p.user.id, !p.user.isActive);
     toast.success(p.user.isActive ? 'Account deactivated' : 'Account activated');
     refetch();
+  };
+
+  const openEdit = (p: ProviderProfile) => {
+    setEditing(p);
+    setForm({
+      businessName: p.businessName ?? '',
+      bio: p.bio ?? '',
+      experience: String(p.experience ?? 0),
+      priceFrom: String((p.priceFrom ?? 0) / 100),
+      pricePer: p.pricePer ?? '',
+      city: p.city ?? '',
+      area: p.area ?? '',
+      specialties: (p.specialties ?? []).join(', '),
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    const experience = Number(form.experience);
+    const priceFrom = Number(form.priceFrom);
+    if (Number.isNaN(experience) || experience < 0) return toast.error('Experience must be a number of years');
+    if (Number.isNaN(priceFrom) || priceFrom < 0) return toast.error('Starting price must be a number');
+    setSaving(true);
+    try {
+      await adminApi.providers.update(editing.id, {
+        businessName: form.businessName.trim() || null,
+        bio: form.bio.trim() || null,
+        experience,
+        priceFromRupees: priceFrom,
+        ...(form.pricePer.trim() ? { pricePer: form.pricePer.trim() } : {}),
+        city: form.city.trim() || null,
+        area: form.area.trim() || null,
+        specialties: form.specialties.split(',').map((x) => x.trim()).filter(Boolean),
+      });
+      toast.success('Provider updated');
+      setEditing(null);
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update provider');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const columns: Column<ProviderProfile>[] = [
@@ -138,6 +191,9 @@ export function Providers() {
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => openEdit(p)}>
+                <Pencil className="size-4" /> Edit profile
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => toggleActive(p)}
                 className={p.user?.isActive ? 'text-destructive focus:text-destructive' : ''}
@@ -145,6 +201,12 @@ export function Providers() {
                 {p.user?.isActive
                   ? <><CircleSlash className="size-4" /> Deactivate account</>
                   : <><CheckCircle2 className="size-4" /> Activate account</>}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setToDelete(p)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-4" /> Delete provider profile
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -184,6 +246,67 @@ export function Providers() {
             />
           </div>
         }
+      />
+
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit provider profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="pv-business">Business name</Label>
+              <Input id="pv-business" value={form.businessName} onChange={(e) => setForm((f) => ({ ...f, businessName: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pv-bio">Bio</Label>
+              <Textarea id="pv-bio" rows={3} value={form.bio} onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="pv-exp">Experience (yrs)</Label>
+                <Input id="pv-exp" value={form.experience} onChange={(e) => setForm((f) => ({ ...f, experience: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pv-price">From (₹)</Label>
+                <Input id="pv-price" value={form.priceFrom} onChange={(e) => setForm((f) => ({ ...f, priceFrom: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pv-per">Per</Label>
+                <Input id="pv-per" value={form.pricePer} onChange={(e) => setForm((f) => ({ ...f, pricePer: e.target.value }))} placeholder="/hour" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="pv-city">City</Label>
+                <Input id="pv-city" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pv-area">Area</Label>
+                <Input id="pv-area" value={form.area} onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pv-spec">Specialties</Label>
+              <Input id="pv-spec" value={form.specialties} onChange={(e) => setForm((f) => ({ ...f, specialties: e.target.value }))} placeholder="Comma separated" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDelete
+        target={toDelete}
+        onOpenChange={(o) => !o && setToDelete(null)}
+        onConfirm={(p) => adminApi.providers.remove(p.id).then(refetch)}
+        title={(p) => `Delete ${p.user?.name ?? 'this provider'}'s profile?`}
+        description={() =>
+          'Only the provider profile is removed — the user account stays, keeping their customer history. Providers with bookings or reviews cannot be deleted.'
+        }
+        successMessage={() => 'Provider profile deleted'}
       />
     </div>
   );

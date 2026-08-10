@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { adminApi, formatINR } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { BackLink, Field } from '../components/detail';
-import { UserCell, Stars, fmtDateTime } from '../components/common';
+import { UserCell, Stars, PhoneLink, fmtDateTime } from '../components/common';
 import { StatusBadge } from '../components/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Skeleton } from '../components/ui/skeleton';
@@ -65,7 +65,7 @@ export function TenderDetail() {
         <Card>
           <CardHeader><CardTitle className="text-base">Posted by</CardTitle></CardHeader>
           <CardContent>
-            <UserCell name={t.customer?.name} sub={t.customer?.phone} avatar={t.customer?.avatar} />
+            <UserCell name={t.customer?.name} sub={<PhoneLink phone={t.customer?.phone} />} avatar={t.customer?.avatar} />
           </CardContent>
         </Card>
       </div>

@@ -5,7 +5,7 @@ import { UserX, UserCheck, Wrench, MapPin, Heart, Pencil } from 'lucide-react';
 import { adminApi, formatINR } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { BackLink, Field } from '../components/detail';
-import { UserCell, Stars, fmtDate } from '../components/common';
+import { UserCell, Stars, PhoneLink, fmtDate } from '../components/common';
 import { StatusBadge } from '../components/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -38,7 +38,13 @@ export function UserDetail() {
     if (form.name.trim()) patch.name = form.name.trim();
     if (form.city.trim()) patch.city = form.city.trim();
     if (form.area.trim()) patch.area = form.area.trim();
-    await adminApi.users.update(u.id, patch as Parameters<typeof adminApi.users.update>[1]);
+    try {
+      await adminApi.users.update(u.id, patch as Parameters<typeof adminApi.users.update>[1]);
+    } catch (e) {
+      // 409 when the email already belongs to another account — one email, one user.
+      toast.error(e instanceof Error ? e.message : 'Could not update user');
+      return;
+    }
     toast.success('User updated');
     setEditing(false);
     refetch();
@@ -96,7 +102,7 @@ export function UserDetail() {
         <Card>
           <CardHeader><CardTitle className="text-base">Profile</CardTitle></CardHeader>
           <CardContent>
-            <Field label="Phone" value={u.phone} />
+            <Field label="Phone" value={<PhoneLink phone={u.phone} />} />
             <Field label="Email" value={u.email} />
             <Field label="Role" value={<StatusBadge status={u.role} />} />
             <Field label="City" value={u.city} />

@@ -5,7 +5,7 @@ import { RotateCcw } from 'lucide-react';
 import { adminApi, formatINR } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { BackLink, Field } from '../components/detail';
-import { UserCell, fmtDateTime } from '../components/common';
+import { UserCell, PhoneLink, fmtDateTime } from '../components/common';
 import { StatusBadge } from '../components/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -99,7 +99,7 @@ export function BookingDetail() {
         <Card>
           <CardHeader><CardTitle className="text-base">Customer</CardTitle></CardHeader>
           <CardContent>
-            <UserCell name={b.customer?.name} sub={b.customer?.phone} avatar={b.customer?.avatar} />
+            <UserCell name={b.customer?.name} sub={<PhoneLink phone={b.customer?.phone} />} avatar={b.customer?.avatar} />
           </CardContent>
         </Card>
         <Card className="lg:col-span-2">

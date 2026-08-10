@@ -5,7 +5,7 @@ import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
 import { StatCard } from '../components/StatCard';
 import { DataTable, type Column } from '../components/DataTable';
-import { SearchInput, UserCell, fmtDate } from '../components/common';
+import { SearchInput, UserCell, PhoneLink, fmtDate } from '../components/common';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import type { ReferralRow } from '../lib/types';
@@ -28,7 +28,7 @@ export function Referrals() {
     {
       key: 'referrer',
       header: 'Referrer',
-      cell: (r) => <UserCell name={r.name} sub={r.phone} avatar={r.avatar} />,
+      cell: (r) => <UserCell name={r.name} sub={<PhoneLink phone={r.phone} />} avatar={r.avatar} />,
     },
     { key: 'code', header: 'Code', cell: (r) => <span className="font-mono text-sm">{r.referralCode ?? '—'}</span> },
     { key: 'count', header: 'Referred', cell: (r) => <Badge variant="secondary" className="font-normal">{r.referredCount}</Badge> },
@@ -87,7 +87,7 @@ export function Referrals() {
               {r.referredUsers.map((u) => (
                 <div key={u.id} className="flex items-center justify-between text-sm border-b last:border-0 pb-2 last:pb-0">
                   <span>{u.name}</span>
-                  <span className="text-muted-foreground">{u.phone} · joined {fmtDate(u.createdAt)}</span>
+                  <span className="text-muted-foreground"><PhoneLink phone={u.phone} /> · joined {fmtDate(u.createdAt)}</span>
                 </div>
               ))}
             </div>

@@ -4,7 +4,7 @@ import { adminApi } from '../lib/api';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
 import { DataTable, type Column } from '../components/DataTable';
-import { SearchInput, fmtDateTime } from '../components/common';
+import { SearchInput, PhoneLink, fmtDateTime } from '../components/common';
 import { FilterSelect } from '../components/FilterSelect';
 import { StatusBadge } from '../components/StatusBadge';
 import { Badge } from '../components/ui/badge';
@@ -23,7 +23,7 @@ export function LoginAudit() {
   );
 
   const columns: Column<OtpLogEntry>[] = [
-    { key: 'phone', header: 'Phone', cell: (o) => <span className="text-sm font-mono">{o.phone}</span> },
+    { key: 'phone', header: 'Phone', cell: (o) => <PhoneLink phone={o.phone} className="text-sm font-mono" /> },
     { key: 'user', header: 'Account', cell: (o) => (o.userName ? <span className="text-sm">{o.userName} {o.userRole && <Badge variant="secondary" className="font-normal ml-1">{o.userRole}</Badge>}</span> : <span className="text-sm text-muted-foreground">New / unknown</span>) },
     {
       key: 'status',

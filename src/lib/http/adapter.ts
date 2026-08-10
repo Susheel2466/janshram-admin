@@ -9,9 +9,11 @@ import type {
   Review, Coupon, Notification, Conversation, Category, DashboardStats,
   TimeseriesPoint, CategoryBreakdown, AuditLogEntry, Paginated, BookingStatus,
   TenderStatus, AdminProfile, Address, Favorite, PaymentRecord, ReferralRow,
-  SupportTicket, TicketMessage, TicketStats, TicketStatus, TicketPriority,
-  PlatformSettings, ReferralTotals, Payout, OtpLogEntry,
+  SupportTicket, TicketMessage, TicketStats, TicketStatus, TicketPriority, TicketAssignee,
+  PlatformSettings, ReferralTotals, Payout, OtpLogEntry, Faq, LegalPage, ChatMessage, PresignResult,
+  MessageLog, MessageLogSummary,
 } from '../types';
+import type { UploadFolder } from '../upload';
 
 // Only forward defined values as query params.
 type Params = Record<string, unknown>;
@@ -38,6 +40,8 @@ export const httpAdapter: AdminApi = {
   },
 
   users: {
+    create: (data) => http.post<{ user: User }>('/admin/users', data),
+    remove: (id) => http.del<{ ok: true }>(`/admin/users/${id}`),
     list: (params) => http.get<Paginated<User>>('/admin/users', clean(params)),
     get: (id) => http.get<{ user: User }>(`/admin/users/${id}`),
     setActive: (id, isActive) => http.patch<{ user: User }>(`/admin/users/${id}/active`, { isActive }),
@@ -47,6 +51,8 @@ export const httpAdapter: AdminApi = {
   },
 
   providers: {
+    update: (id, patch) => http.patch<{ provider: ProviderProfile }>(`/admin/providers/${id}`, patch),
+    remove: (id) => http.del<{ ok: true }>(`/admin/providers/${id}`),
     list: (params) => http.get<Paginated<ProviderProfile>>('/admin/providers', clean(params)),
     get: (id) => http.get<{ provider: ProviderProfile }>(`/admin/providers/${id}`),
     setVerified: (id, isVerified) => http.patch<{ provider: ProviderProfile }>(`/admin/providers/${id}/verified`, { isVerified }),
@@ -62,6 +68,22 @@ export const httpAdapter: AdminApi = {
     remove: (id) => http.del<{ ok: true }>(`/admin/categories/${id}`),
   },
 
+  faqs: {
+    list: () => http.get<{ faqs: Faq[] }>('/admin/faqs'),
+    create: (data) => http.post<{ faq: Faq }>('/admin/faqs', data),
+    update: (id, data) => http.patch<{ faq: Faq }>(`/admin/faqs/${id}`, data),
+    remove: (id) => http.del<{ ok: true }>(`/admin/faqs/${id}`),
+    reorder: (ids) => http.post<{ ok: true }>('/admin/faqs/reorder', { ids }),
+  },
+
+  legal: {
+    list: () => http.get<{ pages: LegalPage[] }>('/admin/legal'),
+    create: (data) => http.post<{ page: LegalPage }>('/admin/legal', data),
+    update: (id, data) => http.patch<{ page: LegalPage }>(`/admin/legal/${id}`, data),
+    remove: (id) => http.del<{ ok: true }>(`/admin/legal/${id}`),
+    reorder: (ids) => http.post<{ ok: true }>('/admin/legal/reorder', { ids }),
+  },
+
   services: {
     list: (params) => http.get<Paginated<Service>>('/admin/services', clean(params)),
     create: (data) => http.post<{ service: Service }>('/admin/services', data),
@@ -70,6 +92,9 @@ export const httpAdapter: AdminApi = {
   },
 
   bookings: {
+    create: (data) => http.post<{ booking: Booking }>('/admin/bookings', data),
+    update: (id, patch) => http.patch<{ booking: Booking }>(`/admin/bookings/${id}`, patch),
+    remove: (id) => http.del<{ ok: true }>(`/admin/bookings/${id}`),
     list: (params) => http.get<Paginated<Booking>>('/admin/bookings', clean(params)),
     get: (id) => http.get<{ booking: Booking }>(`/admin/bookings/${id}`),
     setStatus: (id, status: BookingStatus) => http.patch<{ booking: Booking }>(`/admin/bookings/${id}/status`, { status }),
@@ -77,12 +102,15 @@ export const httpAdapter: AdminApi = {
   },
 
   tenders: {
+    update: (id, patch) => http.patch<{ tender: Tender }>(`/admin/tenders/${id}`, patch),
+    remove: (id) => http.del<{ ok: true }>(`/admin/tenders/${id}`),
     list: (params) => http.get<Paginated<Tender>>('/admin/tenders', clean(params)),
     get: (id) => http.get<{ tender: Tender }>(`/admin/tenders/${id}`),
     setStatus: (id, status: TenderStatus) => http.patch<{ tender: Tender }>(`/admin/tenders/${id}/status`, { status }),
   },
 
   reviews: {
+    update: (id, patch) => http.patch<{ review: Review }>(`/admin/reviews/${id}`, patch),
     list: (params) => http.get<Paginated<Review>>('/admin/reviews', clean(params)),
     setHidden: (id, hidden) => http.patch<{ review: Review }>(`/admin/reviews/${id}/hidden`, { hidden }),
     remove: (id) => http.del<{ ok: true }>(`/admin/reviews/${id}`),
@@ -101,14 +129,25 @@ export const httpAdapter: AdminApi = {
     remove: (id) => http.del<{ ok: true }>(`/admin/coupons/${id}`),
   },
 
+  messages: {
+    list: (params) =>
+      http.get<Paginated<MessageLog> & { summary: MessageLogSummary; retentionDays: number }>(
+        '/admin/messages',
+        clean(params),
+      ),
+  },
+
   notifications: {
+    remove: (id) => http.del<{ ok: true }>(`/admin/notifications/${id}`),
     history: () => http.get<{ notifications: Notification[] }>('/admin/notifications/history'),
     broadcast: (data) => http.post<{ sentTo: string; count: number }>('/admin/notifications/broadcast', data),
   },
 
   conversations: {
+    remove: (id) => http.del<{ ok: true }>(`/admin/conversations/${id}`),
     list: (params) => http.get<Paginated<Conversation>>('/admin/conversations', clean(params)),
     get: (id) => http.get<{ conversation: Conversation }>(`/admin/conversations/${id}`),
+    reply: (id, body) => http.post<{ message: ChatMessage }>(`/admin/conversations/${id}/messages`, { body }),
   },
 
   payments: {
@@ -127,12 +166,16 @@ export const httpAdapter: AdminApi = {
   },
 
   tickets: {
+    create: (data) => http.post<{ ticket: SupportTicket }>('/admin/tickets', data),
+    remove: (id) => http.del<{ ok: true }>(`/admin/tickets/${id}`),
     stats: () => http.get<{ stats: TicketStats }>('/admin/tickets/stats'),
+    assignees: () => http.get<{ assignees: TicketAssignee[] }>('/admin/tickets/assignees'),
     list: (params) => http.get<Paginated<SupportTicket>>('/admin/tickets', clean(params)),
     get: (id) => http.get<{ ticket: SupportTicket }>(`/admin/tickets/${id}`),
     update: (id, patch: { status?: TicketStatus; priority?: TicketPriority; assigneeId?: string | null }) =>
       http.patch<{ ticket: SupportTicket }>(`/admin/tickets/${id}`, patch),
-    reply: (id, body: string) => http.post<{ message: TicketMessage }>(`/admin/tickets/${id}/messages`, { body }),
+    reply: (id, body: string, attachments?: string[]) =>
+      http.post<{ message: TicketMessage }>(`/admin/tickets/${id}/messages`, { body, attachments }),
   },
 
   audit: {
@@ -147,6 +190,13 @@ export const httpAdapter: AdminApi = {
 
   otpLogs: {
     list: (params) => http.get<Paginated<OtpLogEntry>>('/admin/otp-logs', clean(params)),
+  },
+
+  // Not an /admin/* route — the shared uploads endpoint, which accepts any
+  // authenticated caller. The admin JWT is a normal user token, so it works.
+  uploads: {
+    presign: (folder: UploadFolder, filename: string, contentType: string) =>
+      http.post<PresignResult>('/uploads/presign', { folder, filename, contentType }),
   },
 
   exportCsv: (entity: string) => http.getText(`/admin/export/${entity}`),

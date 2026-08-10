@@ -187,7 +187,7 @@ export interface Review {
   provider?: Pick<ProviderProfile, 'id' | 'user'>;
 }
 
-export type NotificationType = 'BOOKING' | 'TENDER' | 'BID' | 'WALLET' | 'SYSTEM';
+export type NotificationType = 'BOOKING' | 'TENDER' | 'BID' | 'WALLET' | 'CHAT' | 'SYSTEM';
 
 export interface Notification {
   id: string;
@@ -198,6 +198,31 @@ export interface Notification {
   createdAt: string;
   userId?: string;
   user?: Pick<User, 'id' | 'name'>;
+}
+
+// One outbound SMS / WhatsApp attempt. SKIPPED rows explain why nothing was
+// sent (channel off, user opted out, no number, dev mode).
+export type MessageChannel = 'SMS' | 'WHATSAPP';
+export type MessageStatus = 'SENT' | 'FAILED' | 'SKIPPED';
+
+export interface MessageLog {
+  id: string;
+  channel: MessageChannel;
+  status: MessageStatus;
+  to: string;
+  event: string;
+  refId: string | null;
+  body: string;
+  error: string | null;
+  userId: string | null;
+  createdAt: string;
+  user?: Pick<User, 'id' | 'name' | 'phone' | 'role'> | null;
+}
+
+export interface MessageLogSummary {
+  sent: number;
+  failed: number;
+  skipped: number;
 }
 
 export interface Coupon {
@@ -214,6 +239,34 @@ export interface Coupon {
   redemptions?: number; // admin aggregate
 }
 
+// Who a help-centre entry is shown to in the customer/provider apps.
+export type FaqAudience = 'ALL' | 'CUSTOMER' | 'PROVIDER';
+
+export interface Faq {
+  id: string;
+  question: string;
+  answer: string;
+  audience: FaqAudience;
+  order: number; // ascending display position
+  isActive: boolean; // unpublished entries stay hidden from the apps
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Legal / policy document (Terms, Privacy, Refund, …). The customer and
+// provider apps read these at /legal/:slug — the "Quick Links" on their Help &
+// Support screen — so `slug` is a live link target, not just an identifier.
+export interface LegalPage {
+  id: string;
+  slug: string;
+  title: string;
+  content: string; // markdown-lite: ## headings, - bullets, blank-line paragraphs
+  order: number; // ascending display position
+  isActive: boolean; // unpublished pages stay hidden from the apps
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ChatMessage {
   id: string;
   conversationId: string;
@@ -221,6 +274,10 @@ export interface ChatMessage {
   body: string;
   attachments?: string[];
   createdAt: string;
+  editedAt?: string | null;
+  deletedAt?: string | null;
+  /** Sent by an admin from this console rather than by a participant. */
+  fromSupport?: boolean;
 }
 
 export interface Conversation {
@@ -234,6 +291,9 @@ export interface Conversation {
   messages?: ChatMessage[];
   lastMessage?: ChatMessage | null;
   messageCount?: number;
+  // Either participant can block the thread; nobody can send while it is set.
+  blockedById?: string | null;
+  blockedAt?: string | null;
 }
 
 // ── Admin-only ──
@@ -389,6 +449,24 @@ export interface SupportTicket {
   _count?: { messages: number };
 }
 
+// Response from /uploads/presign — the client PUTs the file to `uploadUrl`,
+// then stores `publicUrl`. When R2 isn't configured the backend returns
+// mock:true with a null uploadUrl and nothing is actually stored.
+export interface PresignResult {
+  uploadUrl: string | null;
+  publicUrl: string;
+  key: string;
+  mock: boolean;
+}
+
+// An admin who can own a ticket — the options in the "assign to" picker.
+export interface TicketAssignee {
+  id: string;
+  name: string | null;
+  email: string | null;
+  avatar: string | null;
+}
+
 export interface TicketStats {
   open: number;
   inProgress: number;
@@ -415,6 +493,9 @@ export interface PlatformSettings {
   supportPhone: string;
   providerAutoApproval: boolean;
   maintenanceMode: boolean;
+  // Outbound booking alert channels (in-app notifications are always on).
+  smsBookingAlerts: boolean;
+  whatsappBookingAlerts: boolean;
 }
 
 export interface ReferralTotals {
