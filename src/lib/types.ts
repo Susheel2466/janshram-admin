@@ -449,12 +449,14 @@ export interface SupportTicket {
   _count?: { messages: number };
 }
 
-// Response from /uploads/presign — the client PUTs the file to `uploadUrl`,
-// then stores `publicUrl`. When R2 isn't configured the backend returns
-// mock:true with a null uploadUrl and nothing is actually stored.
-export interface PresignResult {
+// Parameters for a direct browser upload to Cloudinary. The backend only signs
+// the request — the file goes browser → Cloudinary, never through our server.
+// `publicUrl` is the dev-mode placeholder; a real upload returns its own URL.
+export interface UploadSignature {
   uploadUrl: string | null;
-  publicUrl: string;
+  params: Record<string, string>;
+  /** Dev-mode placeholder only; null for real uploads (use Cloudinary's secure_url). */
+  publicUrl: string | null;
   key: string;
   mock: boolean;
 }
