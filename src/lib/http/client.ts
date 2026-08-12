@@ -1,7 +1,11 @@
 // Thin fetch wrapper for the JanShram backend admin API. Injects the admin JWT,
 // parses JSON, throws a typed ApiError on non-2xx, and clears the session on 401.
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
+// VITE_API_URL overrides this — `.env` points at localhost for local work — but
+// the default is PRODUCTION so a build made without the variable set reaches a
+// real backend instead of a machine-local one that only exists on a developer's
+// laptop.
+const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://janshram-backend.onrender.com/api/v1';
 const TOKEN_KEY = 'janshram_admin_token';
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
