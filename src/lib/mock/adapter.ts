@@ -9,7 +9,7 @@ import type {
   Review, Coupon, Notification, Conversation, Category, DashboardStats,
   TimeseriesPoint, CategoryBreakdown, AuditLogEntry, Paginated, BookingStatus,
   AdminProfile, Address, Favorite, PaymentRecord, ReferralRow, PaymentStatus,
-  TicketMessage, TicketStatus, TicketPriority, TicketAssignee, PlatformSettings, Faq, FaqAudience, PresignResult,
+  TicketMessage, TicketStatus, TicketPriority, TicketAssignee, PlatformSettings, Faq, FaqAudience, UploadSignature,
   LegalPage, SupportTicket, TicketCategory, ChatMessage,
 } from '../types';
 
@@ -982,9 +982,10 @@ export const mockAdapter = {
   // break on reload, so we hand back a stable placeholder image instead —
   // enough for the attachment UI to render and round-trip.
   uploads: {
-    presign: (folder: UploadFolder, filename: string, _contentType: string) =>
-      delay<PresignResult>({
+    sign: (folder: UploadFolder, filename: string, _contentType: string) =>
+      delay<UploadSignature>({
         uploadUrl: null,
+        params: {},
         publicUrl: `https://placehold.co/400x300?text=${encodeURIComponent(filename.slice(0, 20))}`,
         key: `${folder}/mock-${filename}`,
         mock: true,

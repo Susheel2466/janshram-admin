@@ -10,7 +10,7 @@ import type {
   TimeseriesPoint, CategoryBreakdown, AuditLogEntry, Paginated, BookingStatus,
   TenderStatus, AdminProfile, Address, Favorite, PaymentRecord, ReferralRow,
   SupportTicket, TicketMessage, TicketStats, TicketStatus, TicketPriority, TicketAssignee,
-  PlatformSettings, ReferralTotals, Payout, OtpLogEntry, Faq, LegalPage, ChatMessage, PresignResult,
+  PlatformSettings, ReferralTotals, Payout, OtpLogEntry, Faq, LegalPage, ChatMessage, UploadSignature,
   MessageLog, MessageLogSummary,
 } from '../types';
 import type { UploadFolder } from '../upload';
@@ -195,8 +195,8 @@ export const httpAdapter: AdminApi = {
   // Not an /admin/* route — the shared uploads endpoint, which accepts any
   // authenticated caller. The admin JWT is a normal user token, so it works.
   uploads: {
-    presign: (folder: UploadFolder, filename: string, contentType: string) =>
-      http.post<PresignResult>('/uploads/presign', { folder, filename, contentType }),
+    sign: (folder: UploadFolder, filename: string, contentType: string) =>
+      http.post<UploadSignature>('/uploads/sign', { folder, filename, contentType }),
   },
 
   exportCsv: (entity: string) => http.getText(`/admin/export/${entity}`),
