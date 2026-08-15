@@ -5,7 +5,7 @@
 import { http } from './client';
 import type { AdminApi } from '../mock/adapter';
 import type {
-  User, ProviderProfile, Service, Booking, Tender, Wallet, WalletTransaction,
+  User, ProviderProfile, Service, Booking, Bid, Tender, Wallet, WalletTransaction,
   Review, Coupon, Notification, Conversation, Category, DashboardStats,
   TimeseriesPoint, CategoryBreakdown, AuditLogEntry, Paginated, BookingStatus,
   TenderStatus, AdminProfile, Address, Favorite, PaymentRecord, ReferralRow,
@@ -107,6 +107,8 @@ export const httpAdapter: AdminApi = {
     list: (params) => http.get<Paginated<Tender>>('/admin/tenders', clean(params)),
     get: (id) => http.get<{ tender: Tender }>(`/admin/tenders/${id}`),
     setStatus: (id, status: TenderStatus) => http.patch<{ tender: Tender }>(`/admin/tenders/${id}/status`, { status }),
+    acceptBid: (tenderId, bidId) =>
+      http.post<{ tender: Tender; bid: Bid; booking: Booking }>(`/admin/tenders/${tenderId}/bids/${bidId}/accept`),
   },
 
   reviews: {

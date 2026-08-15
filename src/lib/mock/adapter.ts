@@ -483,6 +483,21 @@ export const mockAdapter = {
       if (t) t.status = status;
       return delay({ tender: t! });
     },
+    // Mirrors the server: the winning bid is accepted, every other pending bid
+    // is rejected, and the tender is awarded — all or nothing, so the mock can't
+    // produce an awarded tender that still shows rival bids as pending.
+    acceptBid: (tenderId: string, bidId: string) => {
+      const t = db.tenders.find((x) => x.id === tenderId)!;
+      const bid = t?.bids?.find((b) => b.id === bidId)!;
+      if (t && bid) {
+        bid.status = 'ACCEPTED';
+        t.bids?.forEach((b) => {
+          if (b.id !== bidId && b.status === 'PENDING') b.status = 'REJECTED';
+        });
+        t.status = 'AWARDED';
+      }
+      return delay({ tender: t, bid, booking: undefined as unknown as Booking });
+    },
   },
 
   reviews: {
