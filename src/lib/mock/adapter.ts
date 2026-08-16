@@ -10,7 +10,7 @@ import type {
   TimeseriesPoint, CategoryBreakdown, AuditLogEntry, Paginated, BookingStatus,
   AdminProfile, Address, Favorite, PaymentRecord, ReferralRow, PaymentStatus,
   TicketMessage, TicketStatus, TicketPriority, TicketAssignee, PlatformSettings, Faq, FaqAudience, UploadSignature,
-  LegalPage, SupportTicket, TicketCategory, ChatMessage,
+  LegalPage, SupportTicket, TicketCategory, KycStatus, ChatMessage,
 } from '../types';
 
 const delay = <T>(value: T, ms = 220): Promise<T> =>
@@ -274,9 +274,9 @@ export const mockAdapter = {
       const provider: ProviderProfile = p ? { ...p, bookings, reviews } : p;
       return delay({ provider });
     },
-    setVerified: (id: string, isVerified: boolean) => {
+    setVerified: (id: string, isVerified: boolean, note?: string) => {
       const p = db.providers.find((x) => x.id === id);
-      if (p) p.isVerified = isVerified;
+      if (p) { p.isVerified = isVerified; p.verificationNote = note ?? null; }
       return delay({ provider: p! });
     },
     setAvailable: (id: string, isAvailable: boolean) => {
@@ -290,6 +290,27 @@ export const mockAdapter = {
       return delay({ provider: p! });
     },
     // Onboarding approval queue: unverified providers, oldest first.
+    kycChecks: (_id: string) =>
+      delay({ checks: [] as any[], verifier: { name: 'none', live: false, real: false } }),
+    // The annotation is load-bearing: mockAdapter defines the AdminApi type, so
+    // an inferred `'UNAVAILABLE' as const` narrowed the whole surface to that
+    // one literal — the real adapter (which returns the full KycStatus union)
+    // then failed to satisfy it, and comparing against 'VERIFIED' anywhere
+    // became a type error.
+    runKycCheck: (_id: string, document = 'PAN') =>
+      delay<{
+        result: {
+          status: KycStatus; verifier: string; registeredName?: string | null;
+          nameMatch?: number | null; detail?: string | null; autoApproved?: boolean;
+        };
+      }>({
+        result: {
+          status: 'UNAVAILABLE',
+          verifier: 'none',
+          detail: `No KYC verifier is configured in mock mode (${document})`,
+          autoApproved: false,
+        },
+      }),
     pendingKyc: () => {
       const rows = db.providers
         .filter((p) => !p.isVerified)
@@ -376,6 +397,9 @@ export const mockAdapter = {
       const customer = db.users.find((u) => u.id === data.customerId);
       const booking: Booking = {
         id: `b${Date.now()}`,
+        // Six-digit reference customers quote to support. The backend generates
+        // it for real bookings, so the mock just makes one up.
+        ref: Math.floor(100000 + Math.random() * 900000),
         status: data.status ?? 'PENDING',
         scheduledAt: data.scheduledAt,
         address: data.address ?? null,

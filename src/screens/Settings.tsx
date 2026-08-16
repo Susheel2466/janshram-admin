@@ -19,8 +19,10 @@ export function Settings() {
   const { admin } = useAuth();
   const { theme, toggle } = useTheme();
 
-  // Load platform configuration from the backend.
-  const { data, loading } = useApi(() => adminApi.settings.get(), []);
+  // Load platform configuration from the backend. No auto-refresh here: the
+  // response is copied into `form` below, so a background poll landing mid-edit
+  // would silently discard whatever the admin had typed.
+  const { data, loading } = useApi(() => adminApi.settings.get(), [], { refreshMs: 0 });
   const [form, setForm] = useState<PlatformSettings | null>(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => { if (data?.settings) setForm(data.settings); }, [data]);

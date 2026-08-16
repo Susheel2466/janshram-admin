@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SafeImage } from '../components/SafeImage';
 import { toast } from 'sonner';
 import { Link } from 'react-router';
 import {
@@ -73,7 +74,7 @@ function AttachmentPicker({
         <div className="flex flex-wrap gap-2">
           {urls.map((url) => (
             <div key={url} className="relative">
-              <img src={url} alt="Attachment" className="size-14 rounded-lg object-cover border" />
+              <SafeImage src={url} alt="Attachment" className="size-14 rounded-lg object-cover border" />
               <button
                 type="button"
                 onClick={() => onChange(urls.filter((u) => u !== url))}
@@ -182,7 +183,10 @@ export function Tickets() {
   };
 
   return (
-    <div>
+    // Fills the scroll area: the header and stats keep their size, the
+    // workspace below takes whatever is left, and the reply box inside it stays
+    // on screen instead of falling below the fold.
+    <div className="flex h-full flex-col">
       <PageHeader
         title="Support Tickets"
         description="Triage and resolve customer & provider issues"
@@ -193,7 +197,7 @@ export function Tickets() {
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6 shrink-0">
         {stats.loading || !s ? (
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[104px] rounded-xl" />)
         ) : (
@@ -207,7 +211,7 @@ export function Tickets() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-[calc(100vh-320px)] min-h-[460px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-5 min-h-[340px] [&>*]:max-lg:min-h-[420px]">
         {/* Queue */}
         <Card className="lg:col-span-2 flex flex-col overflow-hidden p-0">
           <div className="p-3 border-b space-y-2">
@@ -532,7 +536,7 @@ function TicketThread({
   return (
     <Card className="h-full flex flex-col overflow-hidden p-0">
       {/* Header + triage controls */}
-      <div className="p-4 border-b space-y-3">
+      <div className="p-4 border-b space-y-3 shrink-0">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="font-medium">{t.subject}</h2>
@@ -592,8 +596,8 @@ function TicketThread({
         </div>
       </div>
 
-      {/* Thread */}
-      <ScrollArea className="flex-1 p-4">
+      {/* Thread — the only flexible part; everything else keeps its height. */}
+      <ScrollArea className="flex-1 min-h-0 p-4">
         <div className="space-y-3">
           {t.messages?.map((m) => (
             <div key={m.id} className={cn('flex', m.fromAdmin ? 'justify-end' : 'justify-start')}>
@@ -604,7 +608,7 @@ function TicketThread({
                   <div className="flex flex-wrap gap-2 mt-2">
                     {m.attachments.map((url) => (
                       <a key={url} href={url} target="_blank" rel="noreferrer" title="Open attachment">
-                        <img
+                        <SafeImage
                           src={url}
                           alt="Attachment"
                           className="size-20 rounded-lg object-cover border border-black/10 hover:opacity-90"
@@ -620,8 +624,8 @@ function TicketThread({
         </div>
       </ScrollArea>
 
-      {/* Reply box */}
-      <div className="p-3 border-t">
+      {/* Reply box — pinned to the bottom of the card. */}
+      <div className="p-3 border-t bg-card shrink-0">
         <Textarea
           value={reply}
           onChange={(e) => setReply(e.target.value)}
@@ -630,12 +634,13 @@ function TicketThread({
           className="resize-none mb-2"
           onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send(); }}
         />
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <AttachmentPicker urls={attachments} onChange={setAttachments} disabled={sending} />
-            <span className="text-xs text-muted-foreground">⌘/Ctrl + Enter to send</span>
+            {/* Hidden on narrow panes so it can never push the button away. */}
+            <span className="hidden truncate text-xs text-muted-foreground sm:inline">⌘/Ctrl + Enter to send</span>
           </div>
-          <Button size="sm" onClick={send} disabled={sending || (!reply.trim() && attachments.length === 0)}>
+          <Button size="sm" className="shrink-0" onClick={send} disabled={sending || (!reply.trim() && attachments.length === 0)}>
             {sending ? <Loader2 className="size-4 animate-spin" /> : <><Send className="size-4" /> Send reply</>}
           </Button>
         </div>

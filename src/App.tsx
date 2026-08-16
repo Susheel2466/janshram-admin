@@ -7,6 +7,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { RequireAuth, RedirectIfAuthed } from './components/RouteGuards';
 import { AdminLayout } from './components/AdminLayout';
 import { Login } from './screens/Login';
+import { OfflineBanner } from './components/OfflineBanner';
 
 // Lazy-load routed screens so each becomes its own chunk. Recharts (Dashboard)
 // and the heavier CRUD screens no longer weigh down the initial bundle.
@@ -57,6 +58,8 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <BrowserRouter>
+          {/* Above every route, including login. */}
+          <OfflineBanner />
           <Suspense fallback={<PageFallback />}>
             <Routes>
               <Route path="/login" element={<RedirectIfAuthed><Login /></RedirectIfAuthed>} />

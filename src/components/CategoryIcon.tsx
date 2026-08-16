@@ -37,11 +37,28 @@ export function toIconName(name?: string | null): string {
 // to sit correctly inside whatever box the caller provides.
 export function CategoryIcon({ icon, className = 'size-5' }: { icon?: string | null; className?: string }) {
   if (isCustomIcon(icon)) {
-    return <img src={icon!} alt="" className={`${className} object-contain`} loading="lazy" />;
+    return <CustomIcon src={icon!} className={className} />;
   }
   const name = toIconName(icon);
   if (!VALID.has(name)) return <Shapes className={className} />;
   return <DynamicIcon name={name as IconName} className={className} fallback={() => <Shapes className={className} />} />;
+}
+
+// An uploaded icon can stop resolving — the file was deleted, or the URL
+// predates a storage move. Falling back to the same generic shape an unknown
+// lucide name gets keeps the tile looking deliberate rather than broken.
+function CustomIcon({ src, className }: { src: string; className: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <Shapes className={className} />;
+  return (
+    <img
+      src={src}
+      alt=""
+      className={`${className} object-contain`}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 // ───────────────────────── Custom image upload ─────────────────────────

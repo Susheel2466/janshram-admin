@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SafeImage } from '../components/SafeImage';
 import { toast } from 'sonner';
 import { Trash2, ImageOff, Plus, Pencil } from 'lucide-react';
 import { adminApi, formatINR, paiseToRupees } from '../lib/api';
@@ -56,7 +57,7 @@ export function Services() {
       cell: (s) => (
         <div className="flex items-center gap-3 min-w-0">
           <div className="size-11 rounded-lg bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-            {s.image ? <img src={s.image} alt="" className="size-full object-cover" /> : <ImageOff className="size-4 text-muted-foreground" />}
+            <SafeImage src={s.image} alt={s.title} className="size-full object-cover" />
           </div>
           <div className="min-w-0">
             <div className="font-medium text-sm truncate">{s.title}</div>

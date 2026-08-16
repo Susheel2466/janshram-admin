@@ -11,7 +11,7 @@ import type {
   TenderStatus, AdminProfile, Address, Favorite, PaymentRecord, ReferralRow,
   SupportTicket, TicketMessage, TicketStats, TicketStatus, TicketPriority, TicketAssignee,
   PlatformSettings, ReferralTotals, Payout, OtpLogEntry, Faq, LegalPage, ChatMessage, UploadSignature,
-  MessageLog, MessageLogSummary,
+  MessageLog, MessageLogSummary, KycCheck, KycStatus, KycVerifierInfo,
 } from '../types';
 import type { UploadFolder } from '../upload';
 
@@ -55,10 +55,16 @@ export const httpAdapter: AdminApi = {
     remove: (id) => http.del<{ ok: true }>(`/admin/providers/${id}`),
     list: (params) => http.get<Paginated<ProviderProfile>>('/admin/providers', clean(params)),
     get: (id) => http.get<{ provider: ProviderProfile }>(`/admin/providers/${id}`),
-    setVerified: (id, isVerified) => http.patch<{ provider: ProviderProfile }>(`/admin/providers/${id}/verified`, { isVerified }),
+    setVerified: (id, isVerified, note) => http.patch<{ provider: ProviderProfile }>(`/admin/providers/${id}/verified`, { isVerified, note }),
     setAvailable: (id, isAvailable) => http.patch<{ provider: ProviderProfile }>(`/admin/providers/${id}/available`, { isAvailable }),
     setBadge: (id, badge) => http.patch<{ provider: ProviderProfile }>(`/admin/providers/${id}/badge`, { badge }),
     pendingKyc: () => http.get<{ providers: ProviderProfile[] }>('/admin/providers/pending-kyc'),
+    kycChecks: (id) => http.get<{ checks: KycCheck[]; verifier: KycVerifierInfo }>(`/admin/providers/${id}/kyc`),
+    runKycCheck: (id, document) =>
+      http.post<{ result: { status: KycStatus; verifier: string; registeredName?: string | null; nameMatch?: number | null; detail?: string | null; autoApproved?: boolean } }>(
+        `/admin/providers/${id}/kyc/verify`,
+        { document },
+      ),
   },
 
   categories: {

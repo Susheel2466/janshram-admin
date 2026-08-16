@@ -126,7 +126,8 @@ export function Bookings() {
   };
 
   const columns: Column<Booking>[] = [
-    { key: 'id', header: 'ID', cell: (b) => <span className="text-xs font-mono text-muted-foreground">#{b.id}</span> },
+    // The six-digit reference, not the cuid — it's what a caller reads out.
+    { key: 'id', header: 'ID', cell: (b) => <span className="text-xs font-mono text-muted-foreground">#{b.ref ?? b.id.slice(-6).toUpperCase()}</span> },
     {
       key: 'svc',
       header: 'Service',
@@ -222,7 +223,7 @@ export function Bookings() {
         onPageChange={setPage}
         toolbar={
           <div className="flex flex-col sm:flex-row gap-2">
-            <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search customer, provider, ID…" className="sm:max-w-xs w-full" />
+            <SearchInput value={q} onChange={(v) => { setQ(v); setPage(1); }} placeholder="Search customer, provider or booking #…" className="sm:max-w-xs w-full" />
             <FilterSelect
               value={status}
               onChange={(v) => { setStatus(v); setPage(1); }}
@@ -273,7 +274,7 @@ export function Bookings() {
         target={toDelete}
         onOpenChange={(o) => !o && setToDelete(null)}
         onConfirm={(b) => adminApi.bookings.remove(b.id).then(refetch)}
-        title={(b) => `Delete booking #${b.id.slice(-6)}?`}
+        title={(b) => `Delete booking #${b.ref ?? b.id.slice(-6).toUpperCase()}?`}
         description={() =>
           'A paid booking is an accounting record and must be refunded before it can be removed. Cancelling is usually the right action.'
         }
