@@ -10,6 +10,10 @@ import { KycPanel } from '../components/KycPanel';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { Textarea } from '../components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '../components/ui/dialog';
 import { Skeleton } from '../components/ui/skeleton';
 
 // Provider onboarding approval queue — unverified providers awaiting KYC review.
@@ -18,18 +22,32 @@ export function Verifications() {
   const { data, loading, refetch } = useApi(() => adminApi.providers.pendingKyc(), []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Rejecting without saying why leaves the provider unable to fix anything, so
+  // the reason is collected here and sent to them with the decision.
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState('');
 
   const rows = data?.providers ?? [];
   const selected = rows.find((p) => p.id === selectedId) ?? rows[0] ?? null;
 
-  const decide = async (verify: boolean) => {
+  const decide = async (verify: boolean, note?: string) => {
     if (!selected) return;
     setBusy(true);
-    await adminApi.providers.setVerified(selected.id, verify);
-    toast.success(verify ? `${selected.user?.name} approved` : `${selected.user?.name} rejected`);
-    setSelectedId(null);
-    await refetch();
-    setBusy(false);
+    try {
+      await adminApi.providers.setVerified(selected.id, verify, note);
+      toast.success(
+        verify ? `${selected.user?.name} approved` : `${selected.user?.name} rejected`,
+        { description: 'They have been notified in the app and by SMS/WhatsApp.' },
+      );
+      setSelectedId(null);
+      setRejecting(false);
+      setReason('');
+      await refetch();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Could not save the decision');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -109,13 +127,45 @@ export function Verifications() {
                   provider={selected}
                   busy={busy}
                   onApprove={() => decide(true)}
-                  onReject={() => decide(false)}
+                  onReject={() => setRejecting(true)}
                 />
               </>
             )}
           </div>
         </div>
       )}
+
+      {/* Rejection reason — sent to the provider so they know what to fix. */}
+      <Dialog open={rejecting} onOpenChange={(o) => { if (!o) { setRejecting(false); setReason(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Why is this being rejected?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {selected?.user?.name} will see this in the app and receive it by SMS/WhatsApp, so
+            write what they need to correct.
+          </p>
+          <Textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="e.g. The PAN card photo is blurred — please upload a clearer one."
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRejecting(false); setReason(''); }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={busy || reason.trim().length < 5}
+              onClick={() => decide(false, reason.trim())}
+            >
+              Reject &amp; notify
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

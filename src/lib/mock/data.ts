@@ -202,6 +202,7 @@ for (let i = 0; i < 60; i++) {
   const created = daysAgo(Math.floor(rand() * 45));
   bookings.push({
     id: `b${i + 1}`,
+    ref: 100000 + i,
     status,
     scheduledAt: daysAgo(Math.floor(rand() * 30) - 5),
     address: `${Math.floor(rand() * 300)}, ${pick(areas)}, Mumbai`,

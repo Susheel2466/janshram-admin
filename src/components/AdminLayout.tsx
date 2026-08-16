@@ -27,7 +27,11 @@ export function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMenu={() => setMobileOpen(true)} />
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8">
+          {/* h-full lets a page fill the scroll area and manage its own internal
+              scrolling — the ticket and chat workspaces need that so their
+              composer stays on screen. Pages taller than this simply overflow
+              and `main` scrolls, exactly as before. */}
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 h-full">
             <Outlet />
           </div>
         </main>

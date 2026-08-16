@@ -69,9 +69,41 @@ export interface ProviderProfile {
   services?: Service[];
   bookings?: Booking[];
   reviews?: Review[];
+  /** Admin's decision note — the rejection reason shown back to the provider. */
+  verificationNote?: string | null;
+  verifiedAt?: string | null;
+  // Latest automated KYC verdict (full history via providers.kycChecks).
+  kycStatus?: KycStatus | null;
+  kycCheckedAt?: string | null;
   // Admin aggregates.
   totalEarnedPaise?: number;
   activeBookings?: number;
+}
+
+export type KycStatus = 'VERIFIED' | 'MISMATCH' | 'INVALID' | 'UNAVAILABLE' | 'FAILED';
+export type KycDocument = 'PAN' | 'AADHAAR' | 'GSTIN';
+
+/** One automated verification attempt against an outside authority. */
+export interface KycCheck {
+  id: string;
+  document: KycDocument;
+  value: string;
+  status: KycStatus;
+  verifier: string;
+  registeredName: string | null;
+  nameMatch: number | null;
+  reference: string | null;
+  detail: string | null;
+  createdAt: string;
+}
+
+/** Whether an automated check can run at all, and who would answer it. */
+export interface KycVerifierInfo {
+  name: string;
+  /** A verifier is wired up (includes the dev mock). */
+  live: boolean;
+  /** A real authority will answer — false for the mock. */
+  real: boolean;
 }
 
 export interface Service {
@@ -96,6 +128,8 @@ export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
 
 export interface Booking {
   id: string;
+  /** Six-digit reference customers quote to support. */
+  ref: number | null;
   status: BookingStatus;
   scheduledAt: string;
   address: string | null;
