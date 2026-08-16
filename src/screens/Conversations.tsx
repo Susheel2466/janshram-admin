@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { SafeImage } from '../components/SafeImage';
 import { MessagesSquare, Trash2, Radio, Pause, Ban, ShieldAlert, Send, Loader2 } from 'lucide-react';
 import { adminApi } from '../lib/api';
 import { useApi } from '../lib/useApi';
@@ -23,28 +24,24 @@ export function Conversations() {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const list = useApi(() => adminApi.conversations.list({ q, limit: 50 }), [q]);
+  // Chat moves faster than the rest of the console, so this pair refreshes on a
+  // shorter beat than the shared default — and the Live toggle stops it outright,
+  // because a thread that scrolls under an admin reading back through it is
+  // worse than one that is a few seconds behind.
+  const CHAT_REFRESH_MS = 8_000;
+  const refresh = { refreshMs: live ? CHAT_REFRESH_MS : 0 };
+
+  const list = useApi(() => adminApi.conversations.list({ q, limit: 50 }), [q], refresh);
   const [toDelete, setToDelete] = useState<typeof conv | null>(null);
   const thread = useApi(
     () => (selectedId ? adminApi.conversations.get(selectedId) : Promise.resolve(null)),
     [selectedId],
+    refresh,
   );
 
   const rows = list.data?.data ?? [];
   const conv = thread.data?.conversation;
   const messageCount = conv?.messages?.length ?? 0;
-
-  // Customers and providers are chatting in real time; poll so the console
-  // reflects that without a manual refresh. Pausable, because an admin reading
-  // back through a thread doesn't want it moving under them.
-  useEffect(() => {
-    if (!live) return;
-    const t = setInterval(() => {
-      list.refetch();
-      if (selectedId) thread.refetch();
-    }, 8000);
-    return () => clearInterval(t);
-  }, [live, selectedId, list.refetch, thread.refetch]);
 
   // Follow the conversation as new messages land.
   useEffect(() => {
@@ -70,7 +67,7 @@ export function Conversations() {
   };
 
   return (
-    <div>
+    <div className="flex h-full flex-col">
       <PageHeader
         title="Support Chats"
         description="Monitor conversations between customers and providers"
@@ -82,7 +79,7 @@ export function Conversations() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-220px)] min-h-[480px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-3 min-h-[340px] [&>*]:max-lg:min-h-[420px]">
         <Card className="lg:col-span-1 flex flex-col overflow-hidden p-0">
           <div className="p-3 border-b">
             <SearchInput value={q} onChange={setQ} placeholder="Search participants…" />
@@ -133,7 +130,7 @@ export function Conversations() {
             </div>
           ) : (
             <>
-              <CardHeader className="border-b flex-row items-center justify-between gap-2 space-y-0">
+              <CardHeader className="border-b flex-row items-center justify-between gap-2 space-y-0 shrink-0">
                 <CardTitle className="text-base flex items-center justify-between gap-3">
                   <span>
                     {conv.customer?.name} <span className="text-muted-foreground font-normal">↔ {conv.provider?.user?.name}</span>
@@ -159,7 +156,7 @@ export function Conversations() {
                   <Trash2 className="size-4" />
                 </Button>
               </CardHeader>
-              <ScrollArea className="flex-1 p-4">
+              <ScrollArea className="flex-1 min-h-0 p-4">
                 <div className="space-y-3">
                   {messageCount === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-10">
@@ -186,7 +183,7 @@ export function Conversations() {
                             <div className="flex flex-col gap-1.5 mb-1">
                               {m.attachments!.map((url) => (
                                 <a key={url} href={url} target="_blank" rel="noreferrer">
-                                  <img src={url} alt="attachment" className="rounded-lg max-h-40 object-cover" />
+                                  <SafeImage src={url} alt="Attachment" className="rounded-lg max-h-40 object-cover" />
                                 </a>
                               ))}
                             </div>
@@ -203,14 +200,15 @@ export function Conversations() {
                 </div>
               </ScrollArea>
 
-              <div className="border-t p-3 flex items-center gap-2">
+              {/* Pinned: never shrinks, never scrolls out of view. */}
+              <div className="border-t bg-card p-3 flex items-center gap-2 shrink-0">
                 <Input
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
                   placeholder="Reply as JanShram Support…"
                 />
-                <Button onClick={sendReply} disabled={!reply.trim() || sending}>
+                <Button className="shrink-0" onClick={sendReply} disabled={!reply.trim() || sending}>
                   {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
                   Send
                 </Button>
