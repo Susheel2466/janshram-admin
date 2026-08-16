@@ -5,6 +5,13 @@
 // the default is PRODUCTION so a build made without the variable set reaches a
 // real backend instead of a machine-local one that only exists on a developer's
 // laptop.
+import {
+  isNetworkFailure,
+  reportRequestFailed,
+  reportRequestSucceeded,
+  OFFLINE_MESSAGE,
+} from '../network';
+
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'https://janshram-backend.onrender.com/api/v1';
 const TOKEN_KEY = 'janshram_admin_token';
 
@@ -50,11 +57,23 @@ async function request<T>(
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(buildUrl(path, query), {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(buildUrl(path, query), {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    // Never reached the API. Status 0 distinguishes "no connection" from an
+    // answer, and flips the shared state that drives the offline banner.
+    if (isNetworkFailure(err)) {
+      reportRequestFailed();
+      throw new ApiError(0, OFFLINE_MESSAGE);
+    }
+    throw err;
+  }
+  reportRequestSucceeded();
 
   const isJson = res.headers.get('content-type')?.includes('application/json');
   const data = isJson ? await res.json() : null;
