@@ -77,6 +77,21 @@ export function BookingDetail() {
             <Field label="Status" value={<StatusBadge status={b.status} />} />
             <Field label="Scheduled" value={fmtDateTime(b.scheduledAt)} />
             <Field label="Address" value={b.address} />
+            {b.landmark && <Field label="Landmark" value={b.landmark} />}
+            {b.pincode && <Field label="PIN code" value={b.pincode} />}
+            {/* Who the worker asks for on arrival — the number support rings
+                first when a job goes wrong. */}
+            {b.contactPhone && (
+              <Field
+                label="Contact at location"
+                value={
+                  <span className="flex items-center justify-end gap-2">
+                    {b.contactName ?? '—'}
+                    <PhoneLink phone={b.contactPhone} />
+                  </span>
+                }
+              />
+            )}
             <Field label="Notes" value={b.notes} />
             <Field label="Created" value={fmtDateTime(b.createdAt)} />
             {b.completedAt && <Field label="Completed" value={fmtDateTime(b.completedAt)} />}
