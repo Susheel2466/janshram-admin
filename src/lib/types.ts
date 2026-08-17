@@ -31,11 +31,18 @@ export interface User {
   totalSpentPaise?: number;
 }
 
+// Two-level taxonomy: a top-level category holds sub-categories. A row with a
+// parentId IS a sub-category — the same shape either way.
 export interface Category {
   id: string;
   name: string;
   icon: string | null;
   serviceCount: number;
+  order?: number;
+  isActive?: boolean;
+  parentId?: string | null;
+  children?: Category[];
+  _count?: { services: number; providers: number; children?: number };
 }
 
 export interface ProviderProfile {
@@ -133,6 +140,15 @@ export interface Booking {
   status: BookingStatus;
   scheduledAt: string;
   address: string | null;
+  // The job location in full — support answers "where exactly?" and "who do we
+  // ring?" constantly, and the composed line alone can't.
+  addressLine?: string | null;
+  landmark?: string | null;
+  area?: string | null;
+  city?: string | null;
+  pincode?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
   notes: string | null;
   photos: string[];
   amount: number; // paise

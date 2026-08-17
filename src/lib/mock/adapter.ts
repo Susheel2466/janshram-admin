@@ -320,11 +320,31 @@ export const mockAdapter = {
   },
 
   categories: {
-    list: () => delay({ categories: [...db.categories] }),
-    create: (data: { name: string; icon: string }) => {
-      const cat: Category = { id: `c${Date.now()}`, name: data.name, icon: data.icon, serviceCount: 0 };
-      db.categories.unshift(cat);
+    // Mirrors the API: top-level rows, each carrying its sub-categories.
+    list: () =>
+      delay<{ categories: Category[] }>({
+        categories: db.categories
+          .filter((c) => !c.parentId)
+          .map((c) => ({ ...c, children: db.categories.filter((k) => k.parentId === c.id) })),
+      }),
+    create: (data: { name: string; icon?: string; parentId?: string | null }) => {
+      const cat: Category = {
+        id: `c${Date.now()}`,
+        name: data.name,
+        icon: data.icon ?? null,
+        serviceCount: 0,
+        parentId: data.parentId ?? null,
+        isActive: true,
+      };
+      db.categories.push(cat);
       return delay({ category: cat });
+    },
+    reorder: (ids: string[]) => {
+      ids.forEach((id, i) => {
+        const c = db.categories.find((x) => x.id === id);
+        if (c) c.order = i + 1;
+      });
+      return delay({ ok: true as const });
     },
     update: (id: string, data: Partial<Category>) => {
       const c = db.categories.find((x) => x.id === id);

@@ -72,6 +72,7 @@ export const httpAdapter: AdminApi = {
     create: (data) => http.post<{ category: Category }>('/admin/categories', data),
     update: (id, data) => http.patch<{ category: Category }>(`/admin/categories/${id}`, data),
     remove: (id) => http.del<{ ok: true }>(`/admin/categories/${id}`),
+    reorder: (ids) => http.post<{ ok: true }>('/admin/categories/reorder', { ids }),
   },
 
   faqs: {
