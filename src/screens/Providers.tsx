@@ -23,6 +23,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '../components/ui/dialog';
 import type { ProviderProfile } from '../lib/types';
+import { cn } from '../components/ui/utils';
 
 const NONE = '__none__';
 const BADGES = [NONE, 'Top Rated', 'Verified Pro', 'Most Booked', 'Premium'];
@@ -31,7 +32,7 @@ export function Providers() {
   const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState<ProviderProfile | null>(null);
-  const [form, setForm] = useState({ businessName: '', bio: '', experience: '', priceFrom: '', pricePer: '', city: '', area: '', specialties: '' });
+  const [form, setForm] = useState({ businessName: '', bio: '', experience: '', priceFrom: '', pricePer: '', city: '', area: '', specialties: '', categoryIds: [] as string[] });
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<ProviderProfile | null>(null);
   const [verified, setVerified] = useState('all');
@@ -84,6 +85,8 @@ export function Providers() {
       city: p.city ?? '',
       area: p.area ?? '',
       specialties: (p.specialties ?? []).join(', '),
+      // Trades are edited as checkboxes, so start from what they have.
+      categoryIds: (p.categories ?? []).map((c) => c.id),
     });
   };
 
@@ -96,6 +99,8 @@ export function Providers() {
     setSaving(true);
     try {
       await adminApi.providers.update(editing.id, {
+        // Sent whole: an unticked trade has to come off, which a merge can't do.
+        categoryIds: form.categoryIds,
         businessName: form.businessName.trim() || null,
         bio: form.bio.trim() || null,
         experience,
@@ -286,6 +291,45 @@ export function Providers() {
                 <Input id="pv-area" value={form.area} onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))} />
               </div>
             </div>
+            {/* The provider's trades. This is what the category filter matches
+                against — a provider with none is invisible to customers
+                browsing their exact line of work, and until now the console had
+                no way to set or correct them. */}
+            <div className="space-y-2">
+              <Label>Service categories</Label>
+              <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+                {(cats.data?.categories ?? []).map((c) => {
+                  const picked = form.categoryIds.includes(c.id);
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          categoryIds: picked
+                            ? f.categoryIds.filter((id) => id !== c.id)
+                            : [...f.categoryIds, c.id],
+                        }))
+                      }
+                      className={cn(
+                        'rounded-lg border px-2.5 py-1 text-xs transition-colors',
+                        picked ? 'border-primary bg-primary/10 font-medium text-primary' : 'border-border hover:bg-muted',
+                      )}
+                    >
+                      {picked && <Check className="mr-1 inline size-3" />}
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.categoryIds.length === 0 && (
+                <p className="text-xs text-amber-600">
+                  No category selected — this provider won't appear in category search.
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="pv-spec">Specialties</Label>
               <Input id="pv-spec" value={form.specialties} onChange={(e) => setForm((f) => ({ ...f, specialties: e.target.value }))} placeholder="Comma separated" />

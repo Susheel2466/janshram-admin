@@ -27,11 +27,16 @@ export function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMenu={() => setMobileOpen(true)} />
         <main className="flex-1 overflow-y-auto">
-          {/* h-full lets a page fill the scroll area and manage its own internal
-              scrolling — the ticket and chat workspaces need that so their
-              composer stays on screen. Pages taller than this simply overflow
-              and `main` scrolls, exactly as before. */}
-          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 h-full">
+          {/* min-h-full, not h-full.
+              A workspace page (tickets, chats) wants to fill the scroll area and
+              scroll its own panes, so this has to be at least as tall as `main`
+              — hence the min. But it must never be CAPPED at that: on a short
+              window the ticket workspace has a floor of its own, and pinning
+              this box to the viewport made the part below the fold unreachable,
+              because a fixed-height box's overflow is not what `main` scrolls to.
+              As a flex column, the page inside can flex-1 to fill when there is
+              room and push this box taller when there isn't. */}
+          <div className="max-w-[1400px] mx-auto p-4 md:p-6 lg:p-8 min-h-full flex flex-col">
             <Outlet />
           </div>
         </main>

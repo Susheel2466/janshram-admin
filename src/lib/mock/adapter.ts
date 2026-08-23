@@ -159,6 +159,12 @@ export const mockAdapter = {
     create: (data: {
       phone: string; name?: string; email?: string;
       role?: 'CUSTOMER' | 'PROVIDER' | 'ADMIN'; city?: string; area?: string; password?: string;
+      // Provider registration details. Without these a newly registered
+      // provider had no trade and no profile at all, so nothing an admin typed
+      // on the form survived the save.
+      categoryIds?: string[];
+      businessName?: string; businessType?: string; experience?: number; bio?: string;
+      priceFromRupees?: number; pricePer?: string; specialties?: string[];
     }) => {
       // Seeded mock phones are display-formatted ("+91 98765 43210") while the
       // form submits bare digits, so compare on digits only — otherwise this
@@ -192,6 +198,47 @@ export const mockAdapter = {
         updatedAt: now,
       };
       db.users.unshift(user);
+
+      // A provider needs a profile to exist at all — it is what carries the
+      // trade, the price and the coverage location. Mirrors what the real
+      // backend does on the same call.
+      if (user.role === 'PROVIDER') {
+        const profile: ProviderProfile = {
+          id: `p${Date.now()}`,
+          userId: user.id,
+          bio: data.bio ?? null,
+          experience: data.experience ?? 0,
+          completedJobs: 0,
+          priceFrom: Math.round((data.priceFromRupees ?? 0) * 100),
+          pricePer: data.pricePer ?? '/hour',
+          rating: 0,
+          reviewCount: 0,
+          isAvailable: true,
+          isVerified: false,
+          badge: null,
+          specialties: data.specialties ?? [],
+          businessName: data.businessName ?? null,
+          businessType: data.businessType ?? null,
+          // KYC is collected during verification, not at registration.
+          aadhaar: null,
+          pan: null,
+          gstin: null,
+          documents: [],
+          lat: null,
+          lng: null,
+          city: data.city ?? null,
+          area: data.area ?? null,
+          createdAt: now,
+          user: { id: user.id, name: user.name, avatar: null, phone: user.phone, email: user.email, isActive: true },
+          categories: (data.categoryIds ?? [])
+            .map((id) => db.categories.find((c) => c.id === id))
+            .filter(Boolean) as Category[],
+          totalEarnedPaise: 0,
+          activeBookings: 0,
+        };
+        db.providers.unshift(profile);
+      }
+
       return delay({ user });
     },
     remove: (id: string) => {
@@ -233,12 +280,19 @@ export const mockAdapter = {
   },
 
   providers: {
-    update: (id: string, patch: Partial<ProviderProfile> & { priceFromRupees?: number }) => {
+    update: (id: string, patch: Partial<ProviderProfile> & { priceFromRupees?: number; categoryIds?: string[] }) => {
       const p = db.providers.find((x) => x.id === id);
       if (p) {
-        const { priceFromRupees, ...rest } = patch;
+        const { priceFromRupees, categoryIds, ...rest } = patch;
         Object.assign(p, rest);
         if (priceFromRupees !== undefined) p.priceFrom = Math.round(priceFromRupees * 100);
+        // Replaced wholesale: the console edits trades as checkboxes, so an
+        // unticked one has to come off.
+        if (categoryIds) {
+          p.categories = categoryIds
+            .map((cid) => db.categories.find((c) => c.id === cid))
+            .filter(Boolean) as Category[];
+        }
       }
       return delay({ provider: p! });
     },

@@ -183,10 +183,12 @@ export function Tickets() {
   };
 
   return (
-    // Fills the scroll area: the header and stats keep their size, the
-    // workspace below takes whatever is left, and the reply box inside it stays
-    // on screen instead of falling below the fold.
-    <div className="flex h-full flex-col">
+    // Fills the scroll area when there is room and grows past it when there
+    // isn't: the header and stats keep their size, the workspace below takes
+    // whatever is left but never less than its floor. On a short window that
+    // floor makes the page taller than the viewport, which is exactly when it
+    // has to be scrollable rather than clipped.
+    <div className="flex flex-1 flex-col">
       <PageHeader
         title="Support Tickets"
         description="Triage and resolve customer & provider issues"
@@ -211,7 +213,7 @@ export function Tickets() {
         )}
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-5 min-h-[340px] [&>*]:max-lg:min-h-[420px]">
+      <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-5 min-h-[340px] [&>*]:max-lg:min-h-[420px]">
         {/* Queue */}
         <Card className="lg:col-span-2 flex flex-col overflow-hidden p-0">
           <div className="p-3 border-b space-y-2">

@@ -67,7 +67,7 @@ export function Conversations() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-1 flex-col">
       <PageHeader
         title="Support Chats"
         description="Monitor conversations between customers and providers"

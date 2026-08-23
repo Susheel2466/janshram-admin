@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { cn } from './ui/utils';
+import { ratingColor, ratingLabel } from '../lib/ratingColor';
 
 export function SearchInput({
   value,
@@ -104,10 +105,18 @@ export function UserCell({
 }
 
 export function Stars({ rating }: { rating: number }) {
+  // A rating with no reviews behind it is a new provider, not a bad one —
+  // colouring 0.0 red would accuse them of something they haven't done.
+  if (!rating || rating <= 0) {
+    return <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">★ —</span>;
+  }
+  // Red at 1, green at 5: a 2.1 and a 4.8 should not look alike in a table
+  // that is scanned rather than read.
+  const color = ratingColor(rating);
   return (
-    <span className="inline-flex items-center gap-1 text-sm">
-      <span className="text-amber-500">★</span>
-      <span className="font-medium">{rating.toFixed(1)}</span>
+    <span className="inline-flex items-center gap-1 text-sm" title={`${rating.toFixed(1)} — ${ratingLabel(rating)}`}>
+      <span style={{ color }}>★</span>
+      <span className="font-medium" style={{ color }}>{rating.toFixed(1)}</span>
     </span>
   );
 }
