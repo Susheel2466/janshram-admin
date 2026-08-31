@@ -8,6 +8,7 @@ import type {
   AuditLogEntry, BookingStatus, TenderStatus, PaymentMethod, PaymentStatus,
   Address, Favorite, SupportTicket, TicketMessage, TicketStatus, TicketPriority,
   TicketCategory, Payout, OtpLogEntry, Faq, LegalPage, MessageLog,
+  AdminContractor, AdminSubscription, AdminSubscriptionPlan,
 } from '../types';
 
 const rupees = (r: number) => r * 100;
@@ -580,4 +581,107 @@ export const messageLogs: MessageLog[] = users.slice(0, 9).flatMap((u, i) => {
     createdAt: daysAgo(i * 0.3),
     user: { id: u.id, name: u.name, phone: u.phone, role: u.role },
   }));
+});
+
+// ── Contractors & subscriptions ─────────────────────────────────────────────
+//
+// Seeded like the rest so the console runs standalone. The mix is chosen to
+// exercise the states the screens actually branch on rather than to look busy:
+// one verified firm on a paid plan, one waiting with documents in, one on trial
+// with nothing submitted, and one suspended.
+
+const days = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString();
+
+export const subscriptionPlans: AdminSubscriptionPlan[] = [
+  { id: 'plan_weekly', code: 'weekly', name: 'Weekly Plan', priceRupees: 99, durationDays: 7, isActive: true, order: 1 },
+  { id: 'plan_monthly', code: 'monthly', name: 'Monthly Plan', priceRupees: 299, durationDays: 30, isActive: true, order: 2 },
+];
+
+const contractorSeeds = [
+  {
+    id: 'c1', firm: 'Sharma Construction', type: 'Proprietorship', name: 'Rajesh Sharma',
+    phone: '+91 98765 43210', city: 'Gaya', area: 'Tilouthu', verified: true, projects: 4,
+    pan: 'ABCPZ1234K', aadhaar: 'XXXXXXXX4521', gstin: '10ABCPZ1234K1Z5',
+    sub: { status: 'ACTIVE' as const, plan: 'Monthly Plan', expires: days(22) },
+  },
+  {
+    // Waiting, with documents in — the queue's whole purpose.
+    id: 'c2', firm: 'Verma Builders', type: 'Partnership', name: 'Anil Verma',
+    phone: '+91 91234 56780', city: 'Patna', area: 'Kankarbagh', verified: false, projects: 1,
+    pan: 'AAFCV5678M', aadhaar: 'XXXXXXXX9087', gstin: null,
+    sub: { status: 'TRIAL' as const, plan: null, expires: days(3) },
+  },
+  {
+    // On trial, nothing submitted: should NOT appear in the queue.
+    id: 'c3', firm: null, type: null, name: 'Suresh Yadav',
+    phone: '+91 99887 76655', city: 'Ranchi', area: null, verified: false, projects: 0,
+    pan: null, aadhaar: null, gstin: null,
+    sub: { status: 'TRIAL' as const, plan: null, expires: days(6) },
+  },
+  {
+    id: 'c4', firm: 'Khan Contractors', type: 'Private Limited', name: 'Imran Khan',
+    phone: '+91 90000 11122', city: 'Mumbai', area: 'Kurla', verified: false, projects: 2,
+    pan: 'AAECK9012P', aadhaar: null, gstin: null,
+    sub: { status: 'SUSPENDED' as const, plan: 'Weekly Plan', expires: days(-4) },
+  },
+];
+
+export const contractors: AdminContractor[] = contractorSeeds.map((c, i) => ({
+  id: c.id,
+  firmName: c.firm,
+  firmType: c.type,
+  experience: [12, 6, 0, 9][i],
+  city: c.city,
+  area: c.area,
+  isVerified: c.verified,
+  verifiedAt: c.verified ? days(-40) : null,
+  verificationNote: c.id === 'c4' ? 'GSTIN did not match the firm name.' : null,
+  kycStatus: c.pan ? (c.verified ? 'VERIFIED' : 'UNAVAILABLE') : null,
+  kycCheckedAt: c.pan ? days(-2) : null,
+  pan: c.pan,
+  aadhaar: c.aadhaar,
+  gstin: c.gstin,
+  documents: [],
+  createdAt: days(-60 + i * 12),
+  projectCount: c.projects,
+  categories: [{ name: 'Masonry' }, { name: 'Electrical' }].slice(0, i % 2 === 0 ? 2 : 1),
+  user: {
+    id: `u_c${i + 1}`,
+    name: c.name,
+    phone: c.phone,
+    email: null,
+    isActive: true,
+    subscription: {
+      status: c.sub.status,
+      expiresAt: c.sub.expires,
+      startedAt: days(-30),
+      autoRenew: false,
+      plan: c.sub.plan ? { name: c.sub.plan } : null,
+    },
+  },
+  kycChecks: [],
+  projects: Array.from({ length: c.projects }, (_, n) => ({
+    id: `${c.id}_p${n + 1}`,
+    name: ['Sharma Residence G+2', 'Kankarbagh Shops', 'Kurla Godown', 'Boundary Wall'][n % 4],
+    status: n === 0 ? 'ACTIVE' : 'COMPLETED',
+    createdAt: days(-20 - n * 10),
+  })),
+}));
+
+export const subscriptions: AdminSubscription[] = contractors.map((c, i) => {
+  const sub = c.user.subscription!;
+  const remaining = Math.ceil((new Date(sub.expiresAt).getTime() - Date.now()) / 86_400_000);
+  return {
+    id: `sub${i + 1}`,
+    userId: c.user.id,
+    status: sub.status,
+    startedAt: sub.startedAt!,
+    expiresAt: sub.expiresAt,
+    daysRemaining: Math.max(0, remaining),
+    autoRenew: false,
+    priceRupees: sub.plan ? (sub.plan.name === 'Monthly Plan' ? 299 : 99) : null,
+    suspendNote: sub.status === 'SUSPENDED' ? 'Documents pending review.' : null,
+    plan: sub.plan ? { code: sub.plan.name === 'Monthly Plan' ? 'monthly' : 'weekly', name: sub.plan.name } : null,
+    user: { id: c.user.id, name: c.user.name, phone: c.user.phone },
+  };
 });

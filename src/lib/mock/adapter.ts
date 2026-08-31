@@ -1145,41 +1145,94 @@ export const mockAdapter = {
   },
 
   // ── Contractors ──
-  //
-  // Mock data is deliberately thin here: the console is developed against the
-  // real API for this section, and a rich fake would only invite building
-  // screens that fit the fake rather than the thing.
   contractors: {
-    list: (_params?: { q?: string; verified?: string; subscription?: string; page?: number; limit?: number }) =>
+    list: (params?: { q?: string; verified?: string; subscription?: string; page?: number; limit?: number }) => {
+      const q = (params?.q ?? '').toLowerCase();
+      const rows = db.contractors.filter((c) =>
+        (!q || `${c.firmName ?? ''} ${c.user.name ?? ''} ${c.user.phone ?? ''}`.toLowerCase().includes(q)) &&
+        (params?.verified === undefined || c.isVerified === (params.verified === 'true')) &&
+        (!params?.subscription || c.user.subscription?.status === params.subscription),
+      );
+      return delay({
+        contractors: rows,
+        pagination: { page: 1, limit: rows.length || 1, total: rows.length, pages: 1 },
+      });
+    },
+    // Documents in and not yet verified — the same rule the API applies, so a
+    // contractor with nothing submitted does not sit in the queue forever.
+    pendingVerification: () =>
       delay({
-        contractors: [] as AdminContractor[],
-        pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+        contractors: db.contractors
+          .filter((c) => !c.isVerified && (c.pan || c.aadhaar))
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
       }),
-    pendingVerification: () => delay({ contractors: [] as AdminContractor[] }),
-    get: (_id: string) => delay({ contractor: null as AdminContractor | null }),
-    setVerified: (_id: string, _isVerified: boolean, _note?: string) =>
-      delay({ contractor: null as AdminContractor | null }),
+    get: (id: string) => delay({ contractor: db.contractors.find((c) => c.id === id) ?? null }),
+    setVerified: (id: string, isVerified: boolean, note?: string) => {
+      const c = db.contractors.find((x) => x.id === id);
+      if (c) {
+        c.isVerified = isVerified;
+        c.verifiedAt = isVerified ? new Date().toISOString() : null;
+        c.verificationNote = note ?? null;
+      }
+      return delay({ contractor: c ?? null });
+    },
     runKycCheck: (_id: string, _document: 'PAN' | 'AADHAAR' | 'GSTIN') =>
+      // No verifier is configured in mock mode either, and saying so is the
+      // honest answer rather than inventing a pass.
       delay({ result: { status: 'UNAVAILABLE', verifier: 'none' } }),
   },
 
   // ── Subscriptions ──
   subscriptions: {
-    plans: () => delay({ plans: [] as AdminSubscriptionPlan[], counts: {} as Record<string, number> }),
-    updatePlan: (_id: string, _patch: Partial<AdminSubscriptionPlan> & { priceRupees?: number }) =>
-      delay({ plan: null as AdminSubscriptionPlan | null }),
-    list: (_params?: { status?: string; page?: number; limit?: number }) =>
+    plans: () =>
       delay({
-        subscriptions: [] as AdminSubscription[],
-        pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+        plans: db.subscriptionPlans,
+        counts: Object.fromEntries(
+          db.subscriptionPlans.map((p) => [
+            p.code,
+            db.subscriptions.filter((s) => s.plan?.code === p.code).length,
+          ]),
+        ),
       }),
-    setSuspended: (_id: string, _suspended: boolean, _note?: string) =>
-      delay({ subscription: null as AdminSubscription | null }),
-    revenue: (_days?: number) =>
-      delay({
-        days: 30, revenueRupees: 0, paidCount: 0, failedCount: 0,
-        subscriptions: {}, trialConversion: null,
-      } as SubscriptionRevenue),
+    updatePlan: (id: string, patch: { name?: string; priceRupees?: number; durationDays?: number; isActive?: boolean; order?: number }) => {
+      const plan = db.subscriptionPlans.find((p) => p.id === id);
+      // Existing subscribers keep the price they were sold — the mock honours
+      // that too, or the console would demo a behaviour the API does not have.
+      if (plan) Object.assign(plan, patch);
+      return delay({ plan: plan ?? null });
+    },
+    list: (params?: { status?: string; page?: number; limit?: number }) => {
+      const rows = db.subscriptions.filter((s) => !params?.status || s.status === params.status);
+      return delay({
+        subscriptions: rows,
+        pagination: { page: 1, limit: rows.length || 1, total: rows.length, pages: 1 },
+      });
+    },
+    setSuspended: (id: string, suspended: boolean, note?: string) => {
+      const s = db.subscriptions.find((x) => x.id === id);
+      if (s) {
+        s.status = suspended ? 'SUSPENDED' : s.daysRemaining > 0 ? (s.plan ? 'ACTIVE' : 'TRIAL') : 'EXPIRED';
+        s.suspendNote = suspended ? note ?? null : null;
+      }
+      return delay({ subscription: s ?? null });
+    },
+    revenue: (days = 30) => {
+      const paid = db.subscriptions.filter((s) => s.plan && s.status !== 'TRIAL');
+      const byState = db.subscriptions.reduce<Record<string, number>>((acc, s) => {
+        acc[s.status] = (acc[s.status] ?? 0) + 1;
+        return acc;
+      }, {});
+      const trials = byState.TRIAL ?? 0;
+      const active = byState.ACTIVE ?? 0;
+      return delay({
+        days,
+        revenueRupees: paid.reduce((sum, s) => sum + (s.priceRupees ?? 0), 0),
+        paidCount: paid.length,
+        failedCount: 1,
+        subscriptions: byState,
+        trialConversion: trials + active > 0 ? Math.round((active / (trials + active)) * 100) : null,
+      });
+    },
   },
 };
 
