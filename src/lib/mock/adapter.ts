@@ -11,6 +11,7 @@ import type {
   AdminProfile, Address, Favorite, PaymentRecord, ReferralRow, PaymentStatus,
   TicketMessage, TicketStatus, TicketPriority, TicketAssignee, PlatformSettings, Faq, FaqAudience, UploadSignature,
   LegalPage, SupportTicket, TicketCategory, KycStatus, ChatMessage,
+  AdminContractor, AdminSubscription, AdminSubscriptionPlan, SubscriptionRevenue,
 } from '../types';
 
 const delay = <T>(value: T, ms = 220): Promise<T> =>
@@ -1141,6 +1142,44 @@ export const mockAdapter = {
       if (p) { p.status = status; p.note = note ?? null; p.processedAt = new Date().toISOString(); }
       return delay({ payout: p! });
     },
+  },
+
+  // ── Contractors ──
+  //
+  // Mock data is deliberately thin here: the console is developed against the
+  // real API for this section, and a rich fake would only invite building
+  // screens that fit the fake rather than the thing.
+  contractors: {
+    list: (_params?: { q?: string; verified?: string; subscription?: string; page?: number; limit?: number }) =>
+      delay({
+        contractors: [] as AdminContractor[],
+        pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+      }),
+    pendingVerification: () => delay({ contractors: [] as AdminContractor[] }),
+    get: (_id: string) => delay({ contractor: null as AdminContractor | null }),
+    setVerified: (_id: string, _isVerified: boolean, _note?: string) =>
+      delay({ contractor: null as AdminContractor | null }),
+    runKycCheck: (_id: string, _document: 'PAN' | 'AADHAAR' | 'GSTIN') =>
+      delay({ result: { status: 'UNAVAILABLE', verifier: 'none' } }),
+  },
+
+  // ── Subscriptions ──
+  subscriptions: {
+    plans: () => delay({ plans: [] as AdminSubscriptionPlan[], counts: {} as Record<string, number> }),
+    updatePlan: (_id: string, _patch: Partial<AdminSubscriptionPlan> & { priceRupees?: number }) =>
+      delay({ plan: null as AdminSubscriptionPlan | null }),
+    list: (_params?: { status?: string; page?: number; limit?: number }) =>
+      delay({
+        subscriptions: [] as AdminSubscription[],
+        pagination: { page: 1, limit: 20, total: 0, pages: 0 },
+      }),
+    setSuspended: (_id: string, _suspended: boolean, _note?: string) =>
+      delay({ subscription: null as AdminSubscription | null }),
+    revenue: (_days?: number) =>
+      delay({
+        days: 30, revenueRupees: 0, paidCount: 0, failedCount: 0,
+        subscriptions: {}, trialConversion: null,
+      } as SubscriptionRevenue),
   },
 };
 

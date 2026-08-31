@@ -12,6 +12,7 @@ import type {
   SupportTicket, TicketMessage, TicketStats, TicketStatus, TicketPriority, TicketAssignee,
   PlatformSettings, ReferralTotals, Payout, OtpLogEntry, Faq, LegalPage, ChatMessage, UploadSignature,
   MessageLog, MessageLogSummary, KycCheck, KycStatus, KycVerifierInfo,
+  AdminContractor, AdminSubscription, AdminSubscriptionPlan, SubscriptionRevenue,
 } from '../types';
 import type { UploadFolder } from '../upload';
 
@@ -48,6 +49,25 @@ export const httpAdapter: AdminApi = {
     update: (id, patch) => http.patch<{ user: User }>(`/admin/users/${id}`, patch),
     addresses: (userId) => http.get<{ addresses: Address[] }>(`/admin/users/${userId}/addresses`),
     favorites: (userId) => http.get<{ favorites: Favorite[] }>(`/admin/users/${userId}/favorites`),
+  },
+
+  contractors: {
+    list: (params) => http.get<{ contractors: AdminContractor[]; pagination: { page: number; limit: number; total: number; pages: number } }>('/admin/contractors', clean(params)),
+    pendingVerification: () => http.get<{ contractors: AdminContractor[] }>('/admin/contractors/pending-verification'),
+    get: (id) => http.get<{ contractor: AdminContractor | null }>(`/admin/contractors/${id}`),
+    setVerified: (id, isVerified, note) =>
+      http.patch<{ contractor: AdminContractor | null }>(`/admin/contractors/${id}/verified`, { isVerified, note }),
+    runKycCheck: (id, document) =>
+      http.post<{ result: { status: string; verifier: string } }>(`/admin/contractors/${id}/kyc/verify`, { document }),
+  },
+
+  subscriptions: {
+    plans: () => http.get<{ plans: AdminSubscriptionPlan[]; counts: Record<string, number> }>('/admin/subscription-plans'),
+    updatePlan: (id, patch) => http.patch<{ plan: AdminSubscriptionPlan | null }>(`/admin/subscription-plans/${id}`, patch),
+    list: (params) => http.get<{ subscriptions: AdminSubscription[]; pagination: { page: number; limit: number; total: number; pages: number } }>('/admin/subscriptions', clean(params)),
+    setSuspended: (id, suspended, note) =>
+      http.patch<{ subscription: AdminSubscription | null }>(`/admin/subscriptions/${id}/suspend`, { suspended, note }),
+    revenue: (days) => http.get<SubscriptionRevenue>('/admin/subscription-revenue', clean({ days })),
   },
 
   providers: {

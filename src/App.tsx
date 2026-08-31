@@ -22,6 +22,8 @@ const UserDetail = named(() => import('./screens/UserDetail'), 'UserDetail');
 const Providers = named(() => import('./screens/Providers'), 'Providers');
 const ProviderDetail = named(() => import('./screens/ProviderDetail'), 'ProviderDetail');
 const Verifications = named(() => import('./screens/Verifications'), 'Verifications');
+const Contractors = named(() => import('./screens/Contractors'), 'Contractors');
+const Subscriptions = named(() => import('./screens/Subscriptions'), 'Subscriptions');
 const Categories = named(() => import('./screens/Categories'), 'Categories');
 const Services = named(() => import('./screens/Services'), 'Services');
 const Bookings = named(() => import('./screens/Bookings'), 'Bookings');
@@ -77,6 +79,8 @@ export default function App() {
                 <Route path="/providers" element={<Providers />} />
                 <Route path="/providers/:id" element={<ProviderDetail />} />
                 <Route path="/verifications" element={<Verifications />} />
+                <Route path="/contractors" element={<Contractors />} />
+                <Route path="/subscriptions" element={<Subscriptions />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/services" element={<Services />} />
                 <Route path="/bookings" element={<Bookings />} />
