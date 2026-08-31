@@ -555,3 +555,136 @@ export interface ReferralTotals {
   totalReferred: number;
   totalPayoutPaise: number;
 }
+
+// ── Contractors & subscriptions ─────────────────────────────────────────────
+
+export type SubscriptionStatus = 'TRIAL' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+
+export interface AdminContractor {
+  id: string;
+  firmName: string | null;
+  firmType?: string | null;
+  /** Years in business. Only on the detail response. */
+  experience?: number;
+  bio?: string | null;
+  city: string | null;
+  area: string | null;
+  isVerified: boolean;
+  verifiedAt: string | null;
+  verificationNote?: string | null;
+  kycStatus: string | null;
+  kycCheckedAt?: string | null;
+  /** Aadhaar is stored masked; the hashes are never sent. */
+  pan: string | null;
+  gstin: string | null;
+  aadhaar: string | null;
+  documents?: string[];
+  createdAt: string;
+  projectCount?: number;
+  categories?: { name: string }[];
+  user: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    email?: string | null;
+    isActive: boolean;
+    subscription?: {
+      status: SubscriptionStatus;
+      expiresAt: string;
+      startedAt?: string;
+      autoRenew?: boolean;
+      plan: { code?: string; name: string } | null;
+    } | null;
+  };
+  kycChecks?: KycCheck[];
+  projects?: { id: string; name: string; status: string; createdAt: string }[];
+}
+
+export interface AdminSubscriptionPlan {
+  id: string;
+  code: string;
+  name: string;
+  priceRupees: number;
+  durationDays: number;
+  isActive: boolean;
+  order: number;
+}
+
+export interface AdminSubscription {
+  id: string;
+  userId: string;
+  status: SubscriptionStatus;
+  startedAt: string;
+  expiresAt: string;
+  daysRemaining: number;
+  autoRenew: boolean;
+  priceRupees: number | null;
+  suspendNote: string | null;
+  plan: { code: string; name: string } | null;
+  user: { id: string; name: string | null; phone: string | null };
+}
+
+export interface SubscriptionRevenue {
+  days: number;
+  revenueRupees: number;
+  paidCount: number;
+  failedCount: number;
+  subscriptions: Partial<Record<SubscriptionStatus, number>>;
+  /** Null when nobody has been on trial yet — no signal, not a bad one. */
+  trialConversion: number | null;
+}
+
+// ── Sites & engagement reviews ──────────────────────────────────────────────
+
+export interface AdminProject {
+  id: string;
+  name: string;
+  status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  progress: number;
+  budgetRupees: number | null;
+  city: string | null;
+  area: string | null;
+  createdAt: string;
+  workerCount?: number;
+  contractor: { id: string; firmName: string | null; user: { id: string; name: string | null; phone: string | null } | null };
+  expenses?: { id: string; amountRupees: number; category: string | null; note: string | null; spentOn: string }[];
+  tasks?: { id: string; title: string; done: boolean }[];
+}
+
+/** One worker on one site, with the arithmetic both parties see. */
+export interface AdminProjectWorker {
+  id: string;
+  status: string;
+  wageRupees: number;
+  wageUnit: string;
+  daysWorked: number;
+  earnedRupees: number;
+  paidRupees: number;
+  dueRupees: number;
+  settlement: 'PAID' | 'PARTIAL' | 'PENDING';
+  days: Record<string, number>;
+  attendance: { date: string; status: string; note: string | null; markedAt: string }[];
+  payments: { id: string; amountRupees: number; method: string; reference: string | null; paidOn: string }[];
+  provider: { id: string; user: { id: string; name: string | null; phone: string | null } | null };
+}
+
+export interface AdminEngagementReview {
+  id: string;
+  direction: 'CONTRACTOR_TO_WORKER' | 'WORKER_TO_CONTRACTOR';
+  rating: number;
+  workQuality: number | null;
+  behaviour: number | null;
+  paymentTimeliness: number | null;
+  reliability: number | null;
+  comment: string | null;
+  hidden: boolean;
+  createdAt: string;
+  projectWorker: {
+    id: string;
+    provider: { id: string; user: { id: string; name: string | null } | null };
+    project: {
+      id: string; name: string;
+      contractor: { id: string; firmName: string | null; user: { id: string; name: string | null } | null };
+    };
+  };
+}

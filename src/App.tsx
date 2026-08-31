@@ -22,6 +22,11 @@ const UserDetail = named(() => import('./screens/UserDetail'), 'UserDetail');
 const Providers = named(() => import('./screens/Providers'), 'Providers');
 const ProviderDetail = named(() => import('./screens/ProviderDetail'), 'ProviderDetail');
 const Verifications = named(() => import('./screens/Verifications'), 'Verifications');
+const Contractors = named(() => import('./screens/Contractors'), 'Contractors');
+const ContractorDetail = named(() => import('./screens/ContractorDetail'), 'ContractorDetail');
+const Subscriptions = named(() => import('./screens/Subscriptions'), 'Subscriptions');
+const Sites = named(() => import('./screens/Sites'), 'Sites');
+const EngagementReviews = named(() => import('./screens/EngagementReviews'), 'EngagementReviews');
 const Categories = named(() => import('./screens/Categories'), 'Categories');
 const Services = named(() => import('./screens/Services'), 'Services');
 const Bookings = named(() => import('./screens/Bookings'), 'Bookings');
@@ -77,13 +82,18 @@ export default function App() {
                 <Route path="/providers" element={<Providers />} />
                 <Route path="/providers/:id" element={<ProviderDetail />} />
                 <Route path="/verifications" element={<Verifications />} />
+                <Route path="/contractors" element={<Contractors />} />
+                <Route path="/contractors/:id" element={<ContractorDetail />} />
+                <Route path="/subscriptions" element={<Subscriptions />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/services" element={<Services />} />
                 <Route path="/bookings" element={<Bookings />} />
                 <Route path="/bookings/:id" element={<BookingDetail />} />
                 <Route path="/tenders" element={<Tenders />} />
                 <Route path="/tenders/:id" element={<TenderDetail />} />
+                <Route path="/sites" element={<Sites />} />
                 <Route path="/reviews" element={<Reviews />} />
+                <Route path="/engagement-reviews" element={<EngagementReviews />} />
                 <Route path="/wallets" element={<Wallets />} />
                 <Route path="/payments" element={<Payments />} />
                 <Route path="/referrals" element={<Referrals />} />

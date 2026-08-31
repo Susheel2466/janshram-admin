@@ -11,6 +11,8 @@ import type {
   AdminProfile, Address, Favorite, PaymentRecord, ReferralRow, PaymentStatus,
   TicketMessage, TicketStatus, TicketPriority, TicketAssignee, PlatformSettings, Faq, FaqAudience, UploadSignature,
   LegalPage, SupportTicket, TicketCategory, KycStatus, ChatMessage,
+  AdminContractor, AdminSubscription, AdminSubscriptionPlan, SubscriptionRevenue,
+  AdminProjectWorker,
 } from '../types';
 
 const delay = <T>(value: T, ms = 220): Promise<T> =>
@@ -1140,6 +1142,154 @@ export const mockAdapter = {
       const p = db.payouts.find((x) => x.id === id);
       if (p) { p.status = status; p.note = note ?? null; p.processedAt = new Date().toISOString(); }
       return delay({ payout: p! });
+    },
+  },
+
+  // ── Sites & engagement reviews ──
+  //
+  // Thin on purpose: this section is developed against the real API, and a rich
+  // fake invites screens that fit the fake rather than the thing.
+  sites: {
+    list: (params?: { contractorId?: string; status?: string; page?: number; limit?: number }) => {
+      const rows = db.sites.filter(
+        (p) =>
+          (!params?.contractorId || p.contractor.id === params.contractorId) &&
+          (!params?.status || p.status === params.status),
+      );
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 20;
+      return delay({
+        projects: rows.slice((page - 1) * limit, page * limit),
+        pagination: { page, limit, total: rows.length, pages: Math.ceil(rows.length / limit) },
+      });
+    },
+    get: (id: string) => {
+      const project = db.sites.find((p) => p.id === id) ?? null;
+      // Only the one seeded site has a crew — see the note in ./data.
+      const workers = id === 'c1_p1' ? db.siteCrew : [];
+      const sum = (f: (w: AdminProjectWorker) => number) => workers.reduce((t, w) => t + f(w), 0);
+      return delay({
+        project,
+        workers,
+        totals: {
+          expensesRupees: workers.length ? 48_500 : 0,
+          wagesRupees: sum((w) => w.earnedRupees),
+          paidRupees: sum((w) => w.paidRupees),
+          dueRupees: sum((w) => w.dueRupees),
+        },
+      });
+    },
+  },
+
+  engagementReviews: {
+    list: (params?: { direction?: string; hidden?: string; page?: number; limit?: number }) => {
+      const rows = db.engagementReviews.filter(
+        (r) =>
+          (!params?.direction || r.direction === params.direction) &&
+          (params?.hidden === undefined || r.hidden === (params.hidden === 'true')),
+      );
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 20;
+      return delay({
+        reviews: rows.slice((page - 1) * limit, page * limit),
+        pagination: { page, limit, total: rows.length, pages: Math.ceil(rows.length / limit) },
+      });
+    },
+    setHidden: (id: string, hidden: boolean) => {
+      const review = db.engagementReviews.find((r) => r.id === id) ?? null;
+      if (review) review.hidden = hidden;
+      return delay({ review });
+    },
+  },
+
+  // ── Contractors ──
+  contractors: {
+    list: (params?: { q?: string; verified?: string; subscription?: string; page?: number; limit?: number }) => {
+      const q = (params?.q ?? '').toLowerCase();
+      const rows = db.contractors.filter((c) =>
+        (!q || `${c.firmName ?? ''} ${c.user.name ?? ''} ${c.user.phone ?? ''}`.toLowerCase().includes(q)) &&
+        (params?.verified === undefined || c.isVerified === (params.verified === 'true')) &&
+        (!params?.subscription || c.user.subscription?.status === params.subscription),
+      );
+      return delay({
+        contractors: rows,
+        pagination: { page: 1, limit: rows.length || 1, total: rows.length, pages: 1 },
+      });
+    },
+    // Documents in and not yet verified — the same rule the API applies, so a
+    // contractor with nothing submitted does not sit in the queue forever.
+    pendingVerification: () =>
+      delay({
+        contractors: db.contractors
+          .filter((c) => !c.isVerified && (c.pan || c.aadhaar))
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+      }),
+    get: (id: string) => delay({ contractor: db.contractors.find((c) => c.id === id) ?? null }),
+    setVerified: (id: string, isVerified: boolean, note?: string) => {
+      const c = db.contractors.find((x) => x.id === id);
+      if (c) {
+        c.isVerified = isVerified;
+        c.verifiedAt = isVerified ? new Date().toISOString() : null;
+        c.verificationNote = note ?? null;
+      }
+      return delay({ contractor: c ?? null });
+    },
+    runKycCheck: (_id: string, _document: 'PAN' | 'AADHAAR' | 'GSTIN') =>
+      // No verifier is configured in mock mode either, and saying so is the
+      // honest answer rather than inventing a pass.
+      delay({ result: { status: 'UNAVAILABLE', verifier: 'none' } }),
+  },
+
+  // ── Subscriptions ──
+  subscriptions: {
+    plans: () =>
+      delay({
+        plans: db.subscriptionPlans,
+        counts: Object.fromEntries(
+          db.subscriptionPlans.map((p) => [
+            p.code,
+            db.subscriptions.filter((s) => s.plan?.code === p.code).length,
+          ]),
+        ),
+      }),
+    updatePlan: (id: string, patch: { name?: string; priceRupees?: number; durationDays?: number; isActive?: boolean; order?: number }) => {
+      const plan = db.subscriptionPlans.find((p) => p.id === id);
+      // Existing subscribers keep the price they were sold — the mock honours
+      // that too, or the console would demo a behaviour the API does not have.
+      if (plan) Object.assign(plan, patch);
+      return delay({ plan: plan ?? null });
+    },
+    list: (params?: { status?: string; page?: number; limit?: number }) => {
+      const rows = db.subscriptions.filter((s) => !params?.status || s.status === params.status);
+      return delay({
+        subscriptions: rows,
+        pagination: { page: 1, limit: rows.length || 1, total: rows.length, pages: 1 },
+      });
+    },
+    setSuspended: (id: string, suspended: boolean, note?: string) => {
+      const s = db.subscriptions.find((x) => x.id === id);
+      if (s) {
+        s.status = suspended ? 'SUSPENDED' : s.daysRemaining > 0 ? (s.plan ? 'ACTIVE' : 'TRIAL') : 'EXPIRED';
+        s.suspendNote = suspended ? note ?? null : null;
+      }
+      return delay({ subscription: s ?? null });
+    },
+    revenue: (days = 30) => {
+      const paid = db.subscriptions.filter((s) => s.plan && s.status !== 'TRIAL');
+      const byState = db.subscriptions.reduce<Record<string, number>>((acc, s) => {
+        acc[s.status] = (acc[s.status] ?? 0) + 1;
+        return acc;
+      }, {});
+      const trials = byState.TRIAL ?? 0;
+      const active = byState.ACTIVE ?? 0;
+      return delay({
+        days,
+        revenueRupees: paid.reduce((sum, s) => sum + (s.priceRupees ?? 0), 0),
+        paidCount: paid.length,
+        failedCount: 1,
+        subscriptions: byState,
+        trialConversion: trials + active > 0 ? Math.round((active / (trials + active)) * 100) : null,
+      });
     },
   },
 };
