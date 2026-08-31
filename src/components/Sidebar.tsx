@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Users, Wrench, LayoutGrid, Briefcase, CalendarCheck,
   Gavel, Star, WalletMinimal, TicketPercent, Bell, MessagesSquare, MessageSquare, Settings,
   ShieldCheck, BadgeCheck, CreditCard, Gift, LifeBuoy, ScrollText, Banknote, KeyRound, HardHat,
+  Building2, UsersRound,
   HelpCircle, FileText,
 } from 'lucide-react';
 import { cn } from './ui/utils';
@@ -40,7 +41,9 @@ const sections: { title: string; items: NavItem[] }[] = [
     items: [
       { to: '/bookings', label: 'Bookings', icon: CalendarCheck },
       { to: '/tenders', label: 'Tenders & Bids', icon: Gavel },
+      { to: '/sites', label: 'Sites & Crews', icon: Building2 },
       { to: '/reviews', label: 'Reviews', icon: Star },
+      { to: '/engagement-reviews', label: 'Crew Ratings', icon: UsersRound },
       { to: '/tickets', label: 'Support Tickets', icon: LifeBuoy },
       { to: '/conversations', label: 'Support Chats', icon: MessagesSquare },
       { to: '/faqs', label: 'FAQs', icon: HelpCircle },

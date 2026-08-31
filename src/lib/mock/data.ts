@@ -9,6 +9,7 @@ import type {
   Address, Favorite, SupportTicket, TicketMessage, TicketStatus, TicketPriority,
   TicketCategory, Payout, OtpLogEntry, Faq, LegalPage, MessageLog,
   AdminContractor, AdminSubscription, AdminSubscriptionPlan,
+  AdminProject, AdminProjectWorker, AdminEngagementReview,
 } from '../types';
 
 const rupees = (r: number) => r * 100;
@@ -685,3 +686,101 @@ export const subscriptions: AdminSubscription[] = contractors.map((c, i) => {
     user: { id: c.user.id, name: c.user.name, phone: c.user.phone },
   };
 });
+
+// ── Sites, crews and the ratings left afterwards ────────────────────────────
+//
+// One site is filled in properly rather than four sketched: the screen exists
+// to answer "what does the record say about this worker's wages", and a crew
+// with no attendance and no payments cannot demonstrate that. The three workers
+// cover the three settlement states, which is what the screen colours on.
+
+const day = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
+export const sites: AdminProject[] = contractors.flatMap((c) =>
+  (c.projects ?? []).map((p, n) => ({
+    id: p.id,
+    name: p.name,
+    status: p.status as AdminProject['status'],
+    progress: p.status === 'COMPLETED' ? 100 : [35, 60, 15][n % 3],
+    budgetRupees: [850_000, 320_000, 1_200_000, 95_000][n % 4],
+    city: c.city,
+    area: c.area,
+    createdAt: p.createdAt,
+    workerCount: p.id === 'c1_p1' ? 3 : (n % 3),
+    contractor: { id: c.id, firmName: c.firmName, user: c.user },
+  })),
+);
+
+const crewSeeds = [
+  // Worked 6 days, paid in full — the ordinary case.
+  { id: 'pw1', name: 'Ramesh Kumar', phone: '+91 98111 22233', wage: 600, present: 6, half: 0, absent: 1, paid: 3600 },
+  // Part-paid: the state a wage dispute is usually actually in.
+  { id: 'pw2', name: 'Sunita Devi', phone: '+91 98111 44455', wage: 550, present: 4, half: 2, absent: 0, paid: 1500 },
+  // Nothing paid yet.
+  { id: 'pw3', name: 'Mohan Lal', phone: '+91 98111 66677', wage: 700, present: 3, half: 0, absent: 2, paid: 0 },
+];
+
+export const siteCrew: AdminProjectWorker[] = crewSeeds.map((w, i) => {
+  const daysWorked = w.present + w.half * 0.5;
+  const earned = Math.round(daysWorked * w.wage);
+  const due = Math.max(0, earned - w.paid);
+  const marks = [
+    ...Array.from({ length: w.present }, (_, n) => ({ d: day(-(n + 1)), s: 'PRESENT' })),
+    ...Array.from({ length: w.half }, (_, n) => ({ d: day(-(w.present + n + 1)), s: 'HALF_DAY' })),
+    ...Array.from({ length: w.absent }, (_, n) => ({ d: day(-(w.present + w.half + n + 1)), s: 'ABSENT' })),
+  ];
+  return {
+    id: w.id,
+    status: 'ACTIVE',
+    wageRupees: w.wage,
+    wageUnit: 'DAY',
+    daysWorked,
+    earnedRupees: earned,
+    paidRupees: w.paid,
+    dueRupees: due,
+    settlement: w.paid === 0 ? 'PENDING' : due === 0 ? 'PAID' : 'PARTIAL',
+    days: { PRESENT: w.present, HALF_DAY: w.half, ABSENT: w.absent, LEAVE: 0 },
+    attendance: marks.map((m) => ({ date: m.d, status: m.s, note: null, markedAt: `${m.d}T09:12:00.000Z` })),
+    payments: w.paid
+      ? [{ id: `pay_${w.id}`, amountRupees: w.paid, method: 'CASH', reference: null, paidOn: day(-2) }]
+      : [],
+    provider: { id: `prov_${i + 1}`, user: { id: `u_w${i + 1}`, name: w.name, phone: w.phone } },
+  };
+});
+
+export const engagementReviews: AdminEngagementReview[] = [
+  {
+    id: 'er1', direction: 'CONTRACTOR_TO_WORKER', rating: 5,
+    workQuality: 5, behaviour: 5, paymentTimeliness: null, reliability: 4,
+    comment: 'Came every day on time, finished the plastering ahead of schedule.',
+    hidden: false, createdAt: days(-6),
+    projectWorker: {
+      id: 'pw1',
+      provider: { id: 'prov_1', user: { id: 'u_w1', name: 'Ramesh Kumar' } },
+      project: { id: 'c1_p1', name: 'Sharma Residence G+2', contractor: { id: 'c1', firmName: 'Sharma Construction', user: { id: 'u_c1', name: 'Rajesh Sharma' } } },
+    },
+  },
+  {
+    id: 'er2', direction: 'WORKER_TO_CONTRACTOR', rating: 2,
+    workQuality: null, behaviour: 3, paymentTimeliness: 1, reliability: 2,
+    comment: 'Paisa time pe nahi mila, do hafte rukna pada.',
+    hidden: false, createdAt: days(-4),
+    projectWorker: {
+      id: 'pw2',
+      provider: { id: 'prov_2', user: { id: 'u_w2', name: 'Sunita Devi' } },
+      project: { id: 'c1_p1', name: 'Sharma Residence G+2', contractor: { id: 'c1', firmName: 'Sharma Construction', user: { id: 'u_c1', name: 'Rajesh Sharma' } } },
+    },
+  },
+  {
+    // Already hidden — the state the filter exists to find again.
+    id: 'er3', direction: 'CONTRACTOR_TO_WORKER', rating: 1,
+    workQuality: 1, behaviour: 1, paymentTimeliness: null, reliability: 1,
+    comment: 'Abusive remark about the worker, reported by two people.',
+    hidden: true, createdAt: days(-3),
+    projectWorker: {
+      id: 'pw3',
+      provider: { id: 'prov_3', user: { id: 'u_w3', name: 'Mohan Lal' } },
+      project: { id: 'c4_p1', name: 'Kurla Godown', contractor: { id: 'c4', firmName: 'Khan Contractors', user: { id: 'u_c4', name: 'Imran Khan' } } },
+    },
+  },
+];

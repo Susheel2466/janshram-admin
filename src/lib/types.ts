@@ -633,3 +633,58 @@ export interface SubscriptionRevenue {
   /** Null when nobody has been on trial yet — no signal, not a bad one. */
   trialConversion: number | null;
 }
+
+// ── Sites & engagement reviews ──────────────────────────────────────────────
+
+export interface AdminProject {
+  id: string;
+  name: string;
+  status: 'UPCOMING' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  progress: number;
+  budgetRupees: number | null;
+  city: string | null;
+  area: string | null;
+  createdAt: string;
+  workerCount?: number;
+  contractor: { id: string; firmName: string | null; user: { id: string; name: string | null; phone: string | null } | null };
+  expenses?: { id: string; amountRupees: number; category: string | null; note: string | null; spentOn: string }[];
+  tasks?: { id: string; title: string; done: boolean }[];
+}
+
+/** One worker on one site, with the arithmetic both parties see. */
+export interface AdminProjectWorker {
+  id: string;
+  status: string;
+  wageRupees: number;
+  wageUnit: string;
+  daysWorked: number;
+  earnedRupees: number;
+  paidRupees: number;
+  dueRupees: number;
+  settlement: 'PAID' | 'PARTIAL' | 'PENDING';
+  days: Record<string, number>;
+  attendance: { date: string; status: string; note: string | null; markedAt: string }[];
+  payments: { id: string; amountRupees: number; method: string; reference: string | null; paidOn: string }[];
+  provider: { id: string; user: { id: string; name: string | null; phone: string | null } | null };
+}
+
+export interface AdminEngagementReview {
+  id: string;
+  direction: 'CONTRACTOR_TO_WORKER' | 'WORKER_TO_CONTRACTOR';
+  rating: number;
+  workQuality: number | null;
+  behaviour: number | null;
+  paymentTimeliness: number | null;
+  reliability: number | null;
+  comment: string | null;
+  hidden: boolean;
+  createdAt: string;
+  projectWorker: {
+    id: string;
+    provider: { id: string; user: { id: string; name: string | null } | null };
+    project: {
+      id: string; name: string;
+      contractor: { id: string; firmName: string | null; user: { id: string; name: string | null } | null };
+    };
+  };
+}

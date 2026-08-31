@@ -12,6 +12,7 @@ import type {
   TicketMessage, TicketStatus, TicketPriority, TicketAssignee, PlatformSettings, Faq, FaqAudience, UploadSignature,
   LegalPage, SupportTicket, TicketCategory, KycStatus, ChatMessage,
   AdminContractor, AdminSubscription, AdminSubscriptionPlan, SubscriptionRevenue,
+  AdminProjectWorker,
 } from '../types';
 
 const delay = <T>(value: T, ms = 220): Promise<T> =>
@@ -1141,6 +1142,63 @@ export const mockAdapter = {
       const p = db.payouts.find((x) => x.id === id);
       if (p) { p.status = status; p.note = note ?? null; p.processedAt = new Date().toISOString(); }
       return delay({ payout: p! });
+    },
+  },
+
+  // ── Sites & engagement reviews ──
+  //
+  // Thin on purpose: this section is developed against the real API, and a rich
+  // fake invites screens that fit the fake rather than the thing.
+  sites: {
+    list: (params?: { contractorId?: string; status?: string; page?: number; limit?: number }) => {
+      const rows = db.sites.filter(
+        (p) =>
+          (!params?.contractorId || p.contractor.id === params.contractorId) &&
+          (!params?.status || p.status === params.status),
+      );
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 20;
+      return delay({
+        projects: rows.slice((page - 1) * limit, page * limit),
+        pagination: { page, limit, total: rows.length, pages: Math.ceil(rows.length / limit) },
+      });
+    },
+    get: (id: string) => {
+      const project = db.sites.find((p) => p.id === id) ?? null;
+      // Only the one seeded site has a crew — see the note in ./data.
+      const workers = id === 'c1_p1' ? db.siteCrew : [];
+      const sum = (f: (w: AdminProjectWorker) => number) => workers.reduce((t, w) => t + f(w), 0);
+      return delay({
+        project,
+        workers,
+        totals: {
+          expensesRupees: workers.length ? 48_500 : 0,
+          wagesRupees: sum((w) => w.earnedRupees),
+          paidRupees: sum((w) => w.paidRupees),
+          dueRupees: sum((w) => w.dueRupees),
+        },
+      });
+    },
+  },
+
+  engagementReviews: {
+    list: (params?: { direction?: string; hidden?: string; page?: number; limit?: number }) => {
+      const rows = db.engagementReviews.filter(
+        (r) =>
+          (!params?.direction || r.direction === params.direction) &&
+          (params?.hidden === undefined || r.hidden === (params.hidden === 'true')),
+      );
+      const page = params?.page ?? 1;
+      const limit = params?.limit ?? 20;
+      return delay({
+        reviews: rows.slice((page - 1) * limit, page * limit),
+        pagination: { page, limit, total: rows.length, pages: Math.ceil(rows.length / limit) },
+      });
+    },
+    setHidden: (id: string, hidden: boolean) => {
+      const review = db.engagementReviews.find((r) => r.id === id) ?? null;
+      if (review) review.hidden = hidden;
+      return delay({ review });
     },
   },
 

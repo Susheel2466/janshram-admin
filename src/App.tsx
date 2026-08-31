@@ -25,6 +25,8 @@ const Verifications = named(() => import('./screens/Verifications'), 'Verificati
 const Contractors = named(() => import('./screens/Contractors'), 'Contractors');
 const ContractorDetail = named(() => import('./screens/ContractorDetail'), 'ContractorDetail');
 const Subscriptions = named(() => import('./screens/Subscriptions'), 'Subscriptions');
+const Sites = named(() => import('./screens/Sites'), 'Sites');
+const EngagementReviews = named(() => import('./screens/EngagementReviews'), 'EngagementReviews');
 const Categories = named(() => import('./screens/Categories'), 'Categories');
 const Services = named(() => import('./screens/Services'), 'Services');
 const Bookings = named(() => import('./screens/Bookings'), 'Bookings');
@@ -89,7 +91,9 @@ export default function App() {
                 <Route path="/bookings/:id" element={<BookingDetail />} />
                 <Route path="/tenders" element={<Tenders />} />
                 <Route path="/tenders/:id" element={<TenderDetail />} />
+                <Route path="/sites" element={<Sites />} />
                 <Route path="/reviews" element={<Reviews />} />
+                <Route path="/engagement-reviews" element={<EngagementReviews />} />
                 <Route path="/wallets" element={<Wallets />} />
                 <Route path="/payments" element={<Payments />} />
                 <Route path="/referrals" element={<Referrals />} />

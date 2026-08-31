@@ -13,6 +13,7 @@ import type {
   PlatformSettings, ReferralTotals, Payout, OtpLogEntry, Faq, LegalPage, ChatMessage, UploadSignature,
   MessageLog, MessageLogSummary, KycCheck, KycStatus, KycVerifierInfo,
   AdminContractor, AdminSubscription, AdminSubscriptionPlan, SubscriptionRevenue,
+  AdminProject, AdminProjectWorker, AdminEngagementReview,
 } from '../types';
 import type { UploadFolder } from '../upload';
 
@@ -49,6 +50,16 @@ export const httpAdapter: AdminApi = {
     update: (id, patch) => http.patch<{ user: User }>(`/admin/users/${id}`, patch),
     addresses: (userId) => http.get<{ addresses: Address[] }>(`/admin/users/${userId}/addresses`),
     favorites: (userId) => http.get<{ favorites: Favorite[] }>(`/admin/users/${userId}/favorites`),
+  },
+
+  sites: {
+    list: (params) => http.get<{ projects: AdminProject[]; pagination: { page: number; limit: number; total: number; pages: number } }>('/admin/projects', clean(params)),
+    get: (id) => http.get<{ project: AdminProject; workers: AdminProjectWorker[]; totals: { expensesRupees: number; wagesRupees: number; paidRupees: number; dueRupees: number } }>(`/admin/projects/${id}`),
+  },
+
+  engagementReviews: {
+    list: (params) => http.get<{ reviews: AdminEngagementReview[]; pagination: { page: number; limit: number; total: number; pages: number } }>('/admin/engagement-reviews', clean(params)),
+    setHidden: (id, hidden) => http.patch<{ review: AdminEngagementReview }>(`/admin/engagement-reviews/${id}/hidden`, { hidden }),
   },
 
   contractors: {
