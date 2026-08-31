@@ -5,6 +5,7 @@
 // queue leads: it is the only part with someone waiting at the other end.
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { HardHat, ShieldCheck, ShieldX, Clock, Search } from 'lucide-react';
 import { adminApi } from '../lib/api';
@@ -30,6 +31,7 @@ const SUB_STYLE: Record<SubscriptionStatus, string> = {
 };
 
 export function Contractors() {
+  const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [search, setSearch] = useState('');
   const queue = useApi(() => adminApi.contractors.pendingVerification(), []);
@@ -170,7 +172,8 @@ export function Contractors() {
                 {rows.map((c) => {
                   const sub = c.user.subscription;
                   return (
-                    <tr key={c.id} className="border-b last:border-0">
+                    <tr key={c.id} className="border-b last:border-0 cursor-pointer hover:bg-muted/40"
+                        onClick={() => navigate(`/contractors/${c.id}`)}>
                       <td className="p-3">
                         <div className="font-medium">{c.firmName ?? '—'}</div>
                         <div className="text-xs text-muted-foreground">

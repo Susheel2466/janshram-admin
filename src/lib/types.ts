@@ -564,6 +564,9 @@ export interface AdminContractor {
   id: string;
   firmName: string | null;
   firmType?: string | null;
+  /** Years in business. Only on the detail response. */
+  experience?: number;
+  bio?: string | null;
   city: string | null;
   area: string | null;
   isVerified: boolean;

@@ -23,6 +23,7 @@ const Providers = named(() => import('./screens/Providers'), 'Providers');
 const ProviderDetail = named(() => import('./screens/ProviderDetail'), 'ProviderDetail');
 const Verifications = named(() => import('./screens/Verifications'), 'Verifications');
 const Contractors = named(() => import('./screens/Contractors'), 'Contractors');
+const ContractorDetail = named(() => import('./screens/ContractorDetail'), 'ContractorDetail');
 const Subscriptions = named(() => import('./screens/Subscriptions'), 'Subscriptions');
 const Categories = named(() => import('./screens/Categories'), 'Categories');
 const Services = named(() => import('./screens/Services'), 'Services');
@@ -80,6 +81,7 @@ export default function App() {
                 <Route path="/providers/:id" element={<ProviderDetail />} />
                 <Route path="/verifications" element={<Verifications />} />
                 <Route path="/contractors" element={<Contractors />} />
+                <Route path="/contractors/:id" element={<ContractorDetail />} />
                 <Route path="/subscriptions" element={<Subscriptions />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/services" element={<Services />} />
