@@ -708,8 +708,27 @@ export const sites: AdminProject[] = contractors.flatMap((c) =>
     createdAt: p.createdAt,
     workerCount: p.id === 'c1_p1' ? 3 : (n % 3),
     contractor: { id: c.id, firmName: c.firmName, user: c.user },
+    provider: null,
   })),
 );
+
+// A site a provider runs, not a contractor. Providers were given sites of their
+// own and the console had never seen one: the list reached through `contractor`
+// and the page went blank on the first of these. It is in the mock so the next
+// person to open it in mock mode meets one.
+sites.push({
+  id: 'p1_site1',
+  name: 'Andheri flat — deep clean',
+  status: 'ACTIVE',
+  progress: 40,
+  budgetRupees: 12_000,
+  city: 'Mumbai',
+  area: 'Andheri West',
+  createdAt: days(-5),
+  workerCount: 2,
+  contractor: null,
+  provider: { id: 'prov_10', user: { id: 'u_p10', name: 'Anil Yadav', phone: '+91 98200 11223' } },
+});
 
 const crewSeeds = [
   // Worked 6 days, paid in full — the ordinary case.
@@ -744,7 +763,15 @@ export const siteCrew: AdminProjectWorker[] = crewSeeds.map((w, i) => {
     payments: w.paid
       ? [{ id: `pay_${w.id}`, amountRupees: w.paid, method: 'CASH', reference: null, paidOn: day(-2) }]
       : [],
-    provider: { id: `prov_${i + 1}`, user: { id: `u_w${i + 1}`, name: w.name, phone: w.phone } },
+    // What the server resolves for every crew row. The third has no JanShram
+    // account — written onto the site by hand — which is why it cannot be read
+    // off a provider row.
+    name: w.name,
+    phone: w.phone,
+    isManual: i === 2,
+    age: i === 2 ? 34 : null,
+    location: i === 2 ? 'Rafiganj' : null,
+    provider: i === 2 ? null : { id: `prov_${i + 1}`, user: { id: `u_w${i + 1}`, name: w.name, phone: w.phone } },
   };
 });
 
@@ -757,7 +784,7 @@ export const engagementReviews: AdminEngagementReview[] = [
     projectWorker: {
       id: 'pw1',
       provider: { id: 'prov_1', user: { id: 'u_w1', name: 'Ramesh Kumar' } },
-      project: { id: 'c1_p1', name: 'Sharma Residence G+2', contractor: { id: 'c1', firmName: 'Sharma Construction', user: { id: 'u_c1', name: 'Rajesh Sharma' } } },
+      project: { id: 'c1_p1', name: 'Sharma Residence G+2', contractor: { id: 'c1', firmName: 'Sharma Construction', user: { id: 'u_c1', name: 'Rajesh Sharma' } }, provider: null },
     },
   },
   {
@@ -768,7 +795,7 @@ export const engagementReviews: AdminEngagementReview[] = [
     projectWorker: {
       id: 'pw2',
       provider: { id: 'prov_2', user: { id: 'u_w2', name: 'Sunita Devi' } },
-      project: { id: 'c1_p1', name: 'Sharma Residence G+2', contractor: { id: 'c1', firmName: 'Sharma Construction', user: { id: 'u_c1', name: 'Rajesh Sharma' } } },
+      project: { id: 'c1_p1', name: 'Sharma Residence G+2', contractor: { id: 'c1', firmName: 'Sharma Construction', user: { id: 'u_c1', name: 'Rajesh Sharma' } }, provider: null },
     },
   },
   {
@@ -780,7 +807,7 @@ export const engagementReviews: AdminEngagementReview[] = [
     projectWorker: {
       id: 'pw3',
       provider: { id: 'prov_3', user: { id: 'u_w3', name: 'Mohan Lal' } },
-      project: { id: 'c4_p1', name: 'Kurla Godown', contractor: { id: 'c4', firmName: 'Khan Contractors', user: { id: 'u_c4', name: 'Imran Khan' } } },
+      project: { id: 'c4_p1', name: 'Kurla Godown', contractor: { id: 'c4', firmName: 'Khan Contractors', user: { id: 'u_c4', name: 'Imran Khan' } }, provider: null },
     },
   },
 ];

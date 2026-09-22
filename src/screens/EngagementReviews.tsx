@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { EyeOff, Eye } from 'lucide-react';
 import { adminApi } from '../lib/api';
+import { siteOwner } from '../lib/siteOwner';
 import { useApi } from '../lib/useApi';
 import { PageHeader } from '../components/PageHeader';
 import { FilterSelect } from '../components/FilterSelect';
@@ -100,11 +101,11 @@ export function EngagementReviews() {
 
       <div className="space-y-3">
         {rows.map((r) => {
-          const worker = r.projectWorker.provider.user?.name ?? 'Worker';
-          const contractor =
-            r.projectWorker.project.contractor.firmName ??
-            r.projectWorker.project.contractor.user?.name ??
-            'Contractor';
+          const worker = r.projectWorker.provider?.user?.name ?? 'Worker';
+          // The other side of a review is whoever runs the site — a contractor
+          // firm, or a provider running one of their own. Reaching straight
+          // through `contractor` found null on the second kind.
+          const contractor = siteOwner(r.projectWorker.project).name;
           const byWorker = r.direction === 'WORKER_TO_CONTRACTOR';
 
           return (

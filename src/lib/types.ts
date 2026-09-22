@@ -646,7 +646,16 @@ export interface AdminProject {
   area: string | null;
   createdAt: string;
   workerCount?: number;
-  contractor: { id: string; firmName: string | null; user: { id: string; name: string | null; phone: string | null } | null };
+  /**
+   * Who runs this site — exactly one of these two.
+   *
+   * A site used to be a contractor's by definition. Providers were given sites
+   * of their own, `Project.contractorId` became nullable, and a console that
+   * read `contractor.firmName` without asking started crashing on the first
+   * provider-run site it met.
+   */
+  contractor: { id: string; firmName: string | null; user: { id: string; name: string | null; phone: string | null } | null } | null;
+  provider: { id: string; user: { id: string; name: string | null; phone: string | null } | null } | null;
   expenses?: { id: string; amountRupees: number; category: string | null; note: string | null; spentOn: string }[];
   tasks?: { id: string; title: string; done: boolean }[];
 }
@@ -665,7 +674,18 @@ export interface AdminProjectWorker {
   days: Record<string, number>;
   attendance: { date: string; status: string; note: string | null; markedAt: string }[];
   payments: { id: string; amountRupees: number; method: string; reference: string | null; paidOn: string }[];
-  provider: { id: string; user: { id: string; name: string | null; phone: string | null } | null };
+  /**
+   * Who the worker is, resolved by the server the same way both apps resolve
+   * it. A manual worker — somebody written onto a site who has no JanShram
+   * account — has no provider row at all, and their name and number live on
+   * the crew row itself.
+   */
+  name: string;
+  phone: string | null;
+  isManual: boolean;
+  age: number | null;
+  location: string | null;
+  provider: { id: string; user: { id: string; name: string | null; phone: string | null } | null } | null;
 }
 
 export interface AdminEngagementReview {
@@ -681,10 +701,11 @@ export interface AdminEngagementReview {
   createdAt: string;
   projectWorker: {
     id: string;
-    provider: { id: string; user: { id: string; name: string | null } | null };
+    provider: { id: string; user: { id: string; name: string | null } | null } | null;
     project: {
       id: string; name: string;
-      contractor: { id: string; firmName: string | null; user: { id: string; name: string | null } | null };
+      contractor: { id: string; firmName: string | null; user: { id: string; name: string | null } | null } | null;
+      provider: { id: string; user: { id: string; name: string | null } | null } | null;
     };
   };
 }
