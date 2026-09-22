@@ -1153,7 +1153,7 @@ export const mockAdapter = {
     list: (params?: { contractorId?: string; status?: string; page?: number; limit?: number }) => {
       const rows = db.sites.filter(
         (p) =>
-          (!params?.contractorId || p.contractor.id === params.contractorId) &&
+          (!params?.contractorId || p.contractor?.id === params.contractorId) &&
           (!params?.status || p.status === params.status),
       );
       const page = params?.page ?? 1;

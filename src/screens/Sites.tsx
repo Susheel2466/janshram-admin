@@ -19,6 +19,7 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Skeleton } from '../components/ui/skeleton';
 import type { AdminProjectWorker } from '../lib/types';
+import { siteOwner } from '../lib/siteOwner';
 
 const SETTLE: Record<string, string> = {
   PAID: 'bg-green-500/10 text-green-600 border-green-500/20',
@@ -27,6 +28,7 @@ const SETTLE: Record<string, string> = {
 };
 
 const DAY_LABEL: Record<string, string> = {
+  DOUBLE_DAY: 'Double day (2 days)',
   PRESENT: 'Full day',
   HALF_DAY: 'Half day',
   ABSENT: 'Absent',
@@ -54,8 +56,9 @@ export function Sites() {
             <div>
               <h1 className="text-xl font-semibold">{d.project.name}</h1>
               <p className="text-sm text-muted-foreground">
-                {d.project.contractor.firmName ?? d.project.contractor.user?.name} ·{' '}
-                {d.project.contractor.user?.phone}
+                {[siteOwner(d.project).name, siteOwner(d.project).kind, siteOwner(d.project).phone]
+                  .filter(Boolean)
+                  .join(' · ')}
               </p>
             </div>
 
@@ -84,14 +87,14 @@ export function Sites() {
   const rows = list.data?.projects ?? [];
   return (
     <div>
-      <PageHeader title="Sites" description="Contractor projects, crews and wage records" />
+      <PageHeader title="Sites" description="Crews, attendance and wage records — contractor-run and provider-run" />
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b text-left text-xs text-muted-foreground">
               <tr>
                 <th className="p-3 font-medium">Site</th>
-                <th className="p-3 font-medium">Contractor</th>
+                <th className="p-3 font-medium">Run by</th>
                 <th className="p-3 font-medium">Crew</th>
                 <th className="p-3 font-medium">Status</th>
                 <th className="p-3 font-medium">Started</th>
@@ -116,8 +119,10 @@ export function Sites() {
                     </div>
                   </td>
                   <td className="p-3">
-                    <div>{p.contractor.firmName ?? '—'}</div>
-                    <div className="text-xs text-muted-foreground">{p.contractor.user?.phone}</div>
+                    <div>{siteOwner(p).name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {[siteOwner(p).kind, siteOwner(p).phone].filter(Boolean).join(' · ')}
+                    </div>
                   </td>
                   <td className="p-3">{p.workerCount ?? 0}</td>
                   <td className="p-3">
@@ -151,8 +156,10 @@ function WorkerCard({ worker: w }: { worker: AdminProjectWorker }) {
       <CardContent className="p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="font-medium">{w.provider.user?.name ?? 'Worker'}</p>
-            <p className="text-xs text-muted-foreground">{w.provider.user?.phone}</p>
+            <p className="font-medium">{w.name || 'Worker'}</p>
+            <p className="text-xs text-muted-foreground">
+              {[w.phone, w.isManual ? 'no JanShram account' : null].filter(Boolean).join(' · ') || '—'}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">{w.status}</Badge>
