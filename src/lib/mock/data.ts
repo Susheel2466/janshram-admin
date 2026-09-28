@@ -327,10 +327,10 @@ bookings.filter((b) => b.status === 'COMPLETED').forEach((b, i) => {
 
 // Coupons.
 export const coupons: Coupon[] = [
-  { id: 'cp1', code: 'FIRST100', description: '₹100 off your first booking', discountType: 'FLAT', discountValue: rupees(100), maxDiscount: null, minOrder: rupees(500), active: true, expiresAt: daysAgo(-60), createdAt: daysAgo(90), redemptions: 342 },
-  { id: 'cp2', code: 'MONSOON20', description: '20% off, up to ₹300', discountType: 'PERCENT', discountValue: 20, maxDiscount: rupees(300), minOrder: rupees(800), active: true, expiresAt: daysAgo(-30), createdAt: daysAgo(20), redemptions: 128 },
-  { id: 'cp3', code: 'CLEAN50', description: '₹50 off cleaning services', discountType: 'FLAT', discountValue: rupees(50), maxDiscount: null, minOrder: rupees(400), active: false, expiresAt: daysAgo(10), createdAt: daysAgo(70), redemptions: 89 },
-  { id: 'cp4', code: 'WELCOME15', description: '15% off for new users', discountType: 'PERCENT', discountValue: 15, maxDiscount: rupees(250), minOrder: rupees(600), active: true, expiresAt: null, createdAt: daysAgo(45), redemptions: 210 },
+  { id: 'cp1', code: 'FIRST100', description: '₹100 off your first booking', discountType: 'FLAT', discountValue: rupees(100), maxDiscount: null, minOrder: rupees(500), firstBookingOnly: true, active: true, expiresAt: daysAgo(-60), createdAt: daysAgo(90), redemptions: 342 },
+  { id: 'cp2', code: 'MONSOON20', description: '20% off, up to ₹300', discountType: 'PERCENT', discountValue: 20, maxDiscount: rupees(300), minOrder: rupees(800), firstBookingOnly: false, active: true, expiresAt: daysAgo(-30), createdAt: daysAgo(20), redemptions: 128 },
+  { id: 'cp3', code: 'CLEAN50', description: '₹50 off cleaning services', discountType: 'FLAT', discountValue: rupees(50), maxDiscount: null, minOrder: rupees(400), firstBookingOnly: false, active: false, expiresAt: daysAgo(10), createdAt: daysAgo(70), redemptions: 89 },
+  { id: 'cp4', code: 'WELCOME15', description: '15% off for new users', discountType: 'PERCENT', discountValue: 15, maxDiscount: rupees(250), minOrder: rupees(600), firstBookingOnly: true, active: true, expiresAt: null, createdAt: daysAgo(45), redemptions: 210 },
 ];
 
 // Help-centre FAQs. Seeded as ALL (shown to both apps) plus a couple of
