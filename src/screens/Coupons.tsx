@@ -28,12 +28,14 @@ interface FormState {
   discountValue: string; // rupees if FLAT, percent if PERCENT
   maxDiscount: string; // rupees
   minOrder: string; // rupees
+  firstBookingOnly: boolean;
   active: boolean;
   expiresAt: string; // yyyy-mm-dd
 }
 
 const empty: FormState = {
-  code: '', description: '', discountType: 'FLAT', discountValue: '', maxDiscount: '', minOrder: '', active: true, expiresAt: '',
+  code: '', description: '', discountType: 'FLAT', discountValue: '', maxDiscount: '', minOrder: '',
+  firstBookingOnly: false, active: true, expiresAt: '',
 };
 
 export function Coupons() {
@@ -55,6 +57,7 @@ export function Coupons() {
       discountValue: c.discountType === 'FLAT' ? String(paiseToRupees(c.discountValue)) : String(c.discountValue),
       maxDiscount: c.maxDiscount ? String(paiseToRupees(c.maxDiscount)) : '',
       minOrder: String(paiseToRupees(c.minOrder)),
+      firstBookingOnly: c.firstBookingOnly ?? false,
       active: c.active,
       expiresAt: c.expiresAt ? c.expiresAt.slice(0, 10) : '',
     });
@@ -70,6 +73,7 @@ export function Coupons() {
       discountValue: form.discountType === 'FLAT' ? rupeesToPaise(Number(form.discountValue)) : Number(form.discountValue),
       maxDiscount: form.maxDiscount ? rupeesToPaise(Number(form.maxDiscount)) : null,
       minOrder: rupeesToPaise(Number(form.minOrder) || 0),
+      firstBookingOnly: form.firstBookingOnly,
       active: form.active,
       expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
     };
@@ -168,6 +172,18 @@ export function Coupons() {
                 <Label>Expires</Label>
                 <Input type="date" value={form.expiresAt} onChange={(e) => set({ expiresAt: e.target.value })} />
               </div>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <div>
+                <Label>First booking only</Label>
+                {/* The home screen advertises this one; the server drops it
+                    from a returning customer's list and refuses it at checkout. */}
+                <p className="text-xs text-muted-foreground">Usable once, on a customer's very first booking.</p>
+              </div>
+              <Switch
+                checked={form.firstBookingOnly}
+                onCheckedChange={(v) => set({ firstBookingOnly: v })}
+              />
             </div>
             <div className="flex items-center justify-between pt-1">
               <Label>Active</Label>

@@ -283,6 +283,8 @@ export interface Coupon {
   discountValue: number; // paise if FLAT, percent if PERCENT
   maxDiscount: number | null; // paise
   minOrder: number; // paise
+  /** Usable only on a customer's very first booking — enforced server-side. */
+  firstBookingOnly: boolean;
   active: boolean;
   expiresAt: string | null;
   createdAt: string;
