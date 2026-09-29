@@ -543,6 +543,8 @@ export interface Paginated<T> {
 export interface PlatformSettings {
   platformCommissionPercent: number;
   referralRewardRupees: number;
+  /** What the person joining gets. 0 = the invite pays the referrer only. */
+  referralJoinerRewardRupees: number;
   supportEmail: string;
   supportPhone: string;
   providerAutoApproval: boolean;

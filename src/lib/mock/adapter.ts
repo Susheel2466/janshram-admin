@@ -1047,6 +1047,7 @@ export const mockAdapter = {
         settings: {
           platformCommissionPercent: 15,
           referralRewardRupees: 100,
+          referralJoinerRewardRupees: 0,
           supportEmail: 'support@janshram.in',
           supportPhone: '+91 1800 000 000',
           providerAutoApproval: false,
@@ -1060,6 +1061,7 @@ export const mockAdapter = {
         settings: {
           platformCommissionPercent: 15,
           referralRewardRupees: 100,
+          referralJoinerRewardRupees: 0,
           supportEmail: 'support@janshram.in',
           supportPhone: '+91 1800 000 000',
           providerAutoApproval: false,

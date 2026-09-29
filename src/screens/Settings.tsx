@@ -85,9 +85,21 @@ export function Settings() {
                     onChange={(e) => setField('platformCommissionPercent', Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Referral reward (₹)</Label>
+                  <Label>Referral reward — referrer (₹)</Label>
                   <Input type="number" value={form.referralRewardRupees}
                     onChange={(e) => setField('referralRewardRupees', Number(e.target.value))} />
+                  <p className="text-xs text-muted-foreground">
+                    Paid to whoever's code was used, on any panel, when the new account is created.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Referral reward — new user (₹)</Label>
+                  <Input type="number" min={0} value={form.referralJoinerRewardRupees}
+                    onChange={(e) => setField('referralJoinerRewardRupees', Number(e.target.value))} />
+                  <p className="text-xs text-muted-foreground">
+                    Paid to the person joining. Leave at 0 to offer nothing — the apps only advertise
+                    this half of the invite while it is set.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Support email</Label>
