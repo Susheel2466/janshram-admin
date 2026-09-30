@@ -1126,6 +1126,29 @@ export const mockAdapter = {
     return delay(csv);
   },
 
+  // Thin, like the sites mock: this screen is developed against the real API,
+  // and a rich fake invites a screen that fits the fake.
+  gatewayPayments: {
+    list: (params: ListParams = {}) => {
+      let rows = [...db.gatewayPayments];
+      if (params.status) rows = rows.filter((p) => p.status === params.status);
+      if (params.q) {
+        const q = String(params.q);
+        rows = rows.filter((p) => p.orderId === q || p.paymentId === q || p.purposeId === q);
+      }
+      return delay(paginate(rows, params.page, params.limit ?? 20));
+    },
+    stats: () =>
+      delay({
+        capturedPaise: db.gatewayPayments
+          .filter((p) => p.status !== 'CREATED' && p.status !== 'FAILED')
+          .reduce((n, p) => n + p.amountPaise, 0),
+        refundedPaise: db.gatewayPayments.reduce((n, p) => n + p.refundedPaise, 0),
+        capturedCount: db.gatewayPayments.filter((p) => p.status !== 'CREATED' && p.status !== 'FAILED').length,
+        failedCount: db.gatewayPayments.filter((p) => p.status === 'FAILED').length,
+      }),
+  },
+
   payouts: {
     list: (params: ListParams = {}) => {
       let rows = [...db.payouts];

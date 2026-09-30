@@ -713,3 +713,49 @@ export interface AdminEngagementReview {
     };
   };
 }
+
+/**
+ * A payment as the gateway reported it, and what has been sent back.
+ *
+ * Distinct from the booking's own paymentStatus: a booking says it was paid,
+ * this says which payment paid it, by what method, and what became of it. The
+ * second question could not be asked at all until the platform started keeping
+ * Razorpay's identifiers.
+ */
+export interface GatewayPayment {
+  id: string;
+  orderId: string;
+  /** Null until the payment captures — an abandoned order never gets one. */
+  paymentId: string | null;
+  amountPaise: number;
+  status: 'CREATED' | 'CAPTURED' | 'FAILED' | 'PARTIALLY_REFUNDED' | 'REFUNDED';
+  /** What the money was for, and the id of the thing it was for. */
+  purposeKind: string;
+  purposeId: string;
+  method: string | null;
+  capturedAt: string | null;
+  failedAt: string | null;
+  failureReason: string | null;
+  refundedPaise: number;
+  refundablePaise: number;
+  refunds: GatewayRefund[];
+  /** Filled in for booking payments, so support reads a job and not an id. */
+  booking: { id: string; ref: number | null; customer: { id: string; name: string | null; phone: string | null } | null } | null;
+  createdAt: string;
+}
+
+export interface GatewayRefund {
+  id: string;
+  refundId: string;
+  amountPaise: number;
+  status: 'PENDING' | 'PROCESSED' | 'FAILED';
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface GatewayPaymentStats {
+  capturedPaise: number;
+  refundedPaise: number;
+  capturedCount: number;
+  failedCount: number;
+}
