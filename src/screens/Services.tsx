@@ -21,6 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '../components/ui/alert-dialog';
 import type { Service } from '../lib/types';
+import { ImagesField } from '../components/ImagesField';
 
 const PRICE_UNITS = ['/hour', '/visit', '/day'];
 
@@ -153,7 +154,10 @@ function ServiceFormDialog({
   const [categoryId, setCategoryId] = useState(service?.categoryId ?? '');
   const [price, setPrice] = useState(service ? String(paiseToRupees(service.price)) : '');
   const [priceUnit, setPriceUnit] = useState(service?.priceUnit ?? '/hour');
-  const [image, setImage] = useState(service?.image ?? '');
+  // The cover is derived from the first of these by the server.
+  const [images, setImages] = useState<string[]>(
+    service?.images ?? (service?.image ? [service.image] : []),
+  );
   const [description, setDescription] = useState(service?.description ?? '');
   const [saving, setSaving] = useState(false);
 
@@ -166,10 +170,10 @@ function ServiceFormDialog({
     setSaving(true);
     try {
       if (service) {
-        await adminApi.services.update(service.id, { title: title.trim(), description: description || null, priceRupees, priceUnit, image: image || null, categoryId });
+        await adminApi.services.update(service.id, { title: title.trim(), description: description || null, priceRupees, priceUnit, images, categoryId });
         toast.success('Service updated');
       } else {
-        await adminApi.services.create({ title: title.trim(), description: description || null, priceRupees, priceUnit, image: image || null, categoryId, providerId });
+        await adminApi.services.create({ title: title.trim(), description: description || null, priceRupees, priceUnit, images, categoryId, providerId });
         toast.success('Service created');
       }
       onSaved();
@@ -202,9 +206,10 @@ function ServiceFormDialog({
               <FilterSelect value={priceUnit} onChange={setPriceUnit} options={PRICE_UNITS.map((u) => ({ value: u, label: u }))} className="w-full bg-background" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
-            <div className="space-y-2"><Label>Image URL</Label><Input value={image} onChange={(e) => setImage(e.target.value)} placeholder="https://…" /></div>
+          <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
+          <div className="space-y-2">
+            <Label>Photos</Label>
+            <ImagesField urls={images} onChange={setImages} />
           </div>
           <div className="space-y-2"><Label>Description</Label><Textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
         </div>

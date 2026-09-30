@@ -120,7 +120,12 @@ export interface Service {
   price: number; // paise
   priceUnit: string;
   image: string | null;
-  rating: number;
+ 
+  /**
+   * The set, of which `image` is the cover. The server derives the cover from
+   * the first of these, so the order here is the order shown.
+   */
+  images?: string[]; rating: number;
   reviewCount: number;
   createdAt: string;
   categoryId: string;
