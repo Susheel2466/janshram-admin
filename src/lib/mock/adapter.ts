@@ -425,7 +425,7 @@ export const mockAdapter = {
       rows.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
       return delay(paginate(rows, params.page, params.limit ?? 10));
     },
-    create: (data: { title: string; description?: string | null; priceRupees: number; priceUnit?: string; image?: string | null; categoryId: string; providerId: string }) => {
+    create: (data: { title: string; description?: string | null; priceRupees: number; priceUnit?: string; images?: string[]; categoryId: string; providerId: string }) => {
       const category = db.categories.find((c) => c.id === data.categoryId);
       const provider = db.providers.find((p) => p.id === data.providerId);
       const svc: Service = {
@@ -434,7 +434,9 @@ export const mockAdapter = {
         description: data.description ?? null,
         price: Math.round(data.priceRupees * 100),
         priceUnit: data.priceUnit ?? '/hour',
-        image: data.image ?? null,
+        // The cover is the first photo, the same rule the server applies.
+        image: data.images?.[0] ?? null,
+        images: data.images ?? [],
         rating: 0,
         reviewCount: 0,
         createdAt: new Date().toISOString(),
@@ -447,11 +449,12 @@ export const mockAdapter = {
       if (category) category.serviceCount += 1;
       return delay({ service: svc });
     },
-    update: (id: string, data: Partial<{ title: string; description: string | null; priceRupees: number; priceUnit: string; image: string | null; categoryId: string }>) => {
+    update: (id: string, data: Partial<{ title: string; description: string | null; priceRupees: number; priceUnit: string; images: string[]; categoryId: string }>) => {
       const s = db.services.find((x) => x.id === id);
       if (s) {
-        const { priceRupees, categoryId, ...rest } = data;
+        const { priceRupees, categoryId, images, ...rest } = data;
         Object.assign(s, rest);
+        if (images !== undefined) { s.images = images; s.image = images[0] ?? null; }
         if (priceRupees !== undefined) s.price = Math.round(priceRupees * 100);
         if (categoryId) { s.categoryId = categoryId; s.category = db.categories.find((c) => c.id === categoryId); }
       }
