@@ -10,6 +10,7 @@ import type {
   TicketCategory, Payout, OtpLogEntry, Faq, LegalPage, MessageLog,
   AdminContractor, AdminSubscription, AdminSubscriptionPlan,
   AdminProject, AdminProjectWorker, AdminEngagementReview,
+  GatewayPayment,
 } from '../types';
 
 const rupees = (r: number) => r * 100;
@@ -809,5 +810,46 @@ export const engagementReviews: AdminEngagementReview[] = [
       provider: { id: 'prov_3', user: { id: 'u_w3', name: 'Mohan Lal' } },
       project: { id: 'c4_p1', name: 'Kurla Godown', contractor: { id: 'c4', firmName: 'Khan Contractors', user: { id: 'u_c4', name: 'Imran Khan' } }, provider: null },
     },
+  },
+];
+
+// Four payments covering the states the screen colours on: taken, failed,
+// part-refunded, fully refunded. The failed one carries Razorpay's own wording,
+// because that sentence is the answer to "why did my payment not go through".
+export const gatewayPayments: GatewayPayment[] = [
+  {
+    id: 'gp1', orderId: 'order_PxKq1aBcD2', paymentId: 'pay_PxKq7ZmNo4',
+    amountPaise: 85600, status: 'CAPTURED', purposeKind: 'booking', purposeId: 'bk1',
+    method: 'upi', capturedAt: days(-2), failedAt: null, failureReason: null,
+    refundedPaise: 0, refundablePaise: 85600, refunds: [],
+    booking: { id: 'bk1', ref: 448211, customer: { id: 'u1', name: 'Deepa', phone: '+91 98912 93596' } },
+    createdAt: days(-2),
+  },
+  {
+    id: 'gp2', orderId: 'order_PxLr3dEfG5', paymentId: null,
+    amountPaise: 62000, status: 'FAILED', purposeKind: 'booking', purposeId: 'bk2',
+    method: null, capturedAt: null, failedAt: days(-1),
+    failureReason: 'Payment was not completed within the allotted time',
+    refundedPaise: 0, refundablePaise: 0, refunds: [],
+    booking: { id: 'bk2', ref: 448212, customer: { id: 'u2', name: 'Ajay', phone: '+91 99000 11223' } },
+    createdAt: days(-1),
+  },
+  {
+    id: 'gp3', orderId: 'order_PxMs5hIjK6', paymentId: 'pay_PxMs9QrSt7',
+    amountPaise: 120000, status: 'PARTIALLY_REFUNDED', purposeKind: 'booking', purposeId: 'bk3',
+    method: 'card', capturedAt: days(-6), failedAt: null, failureReason: null,
+    refundedPaise: 40000, refundablePaise: 80000,
+    refunds: [{ id: 'r1', refundId: 'rfnd_PxMsAbCdE8', amountPaise: 40000, status: 'PROCESSED', reason: 'Job cut short', createdAt: days(-4) }],
+    booking: { id: 'bk3', ref: 448213, customer: { id: 'u3', name: 'Karishma', phone: '+91 98111 22233' } },
+    createdAt: days(-6),
+  },
+  {
+    id: 'gp4', orderId: 'order_PxNt7kLmN9', paymentId: 'pay_PxNtBuVwX0',
+    amountPaise: 30000, status: 'REFUNDED', purposeKind: 'wallet_topup', purposeId: 'u4',
+    method: 'netbanking', capturedAt: days(-9), failedAt: null, failureReason: null,
+    refundedPaise: 30000, refundablePaise: 0,
+    refunds: [{ id: 'r2', refundId: 'rfnd_PxNtYzAbC1', amountPaise: 30000, status: 'PENDING', reason: 'Duplicate top-up', createdAt: days(-1) }],
+    booking: null,
+    createdAt: days(-9),
   },
 ];

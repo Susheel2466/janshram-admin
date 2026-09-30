@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Wrench, LayoutGrid, Briefcase, CalendarCheck,
   Gavel, Star, WalletMinimal, TicketPercent, Bell, MessagesSquare, MessageSquare, Settings,
   ShieldCheck, BadgeCheck, CreditCard, Gift, LifeBuoy, ScrollText, Banknote, KeyRound, HardHat,
-  Building2, UsersRound,
+  Building2, UsersRound, Receipt,
   HelpCircle, FileText,
 } from 'lucide-react';
 import { cn } from './ui/utils';
@@ -55,6 +55,8 @@ const sections: { title: string; items: NavItem[] }[] = [
     items: [
       { to: '/subscriptions', label: 'Subscriptions', icon: CreditCard },
       { to: '/payments', label: 'Payments', icon: CreditCard },
+      // The gateway's own record, next to the booking-shaped one.
+      { to: '/gateway-payments', label: 'Gateway payments', icon: Receipt },
       { to: '/payouts', label: 'Payouts', icon: Banknote },
       { to: '/wallets', label: 'Wallets', icon: WalletMinimal },
       { to: '/coupons', label: 'Coupons', icon: TicketPercent },

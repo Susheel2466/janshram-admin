@@ -14,6 +14,7 @@ import type {
   MessageLog, MessageLogSummary, KycCheck, KycStatus, KycVerifierInfo,
   AdminContractor, AdminSubscription, AdminSubscriptionPlan, SubscriptionRevenue,
   AdminProject, AdminProjectWorker, AdminEngagementReview,
+  GatewayPayment, GatewayPaymentStats,
 } from '../types';
 import type { UploadFolder } from '../upload';
 
@@ -220,6 +221,11 @@ export const httpAdapter: AdminApi = {
 
   audit: {
     list: (params) => http.get<Paginated<AuditLogEntry>>('/admin/audit', clean(params)),
+  },
+
+  gatewayPayments: {
+    list: (params) => http.get<Paginated<GatewayPayment>>('/admin/gateway-payments', clean(params)),
+    stats: () => http.get<GatewayPaymentStats>('/admin/gateway-payments/stats'),
   },
 
   payouts: {

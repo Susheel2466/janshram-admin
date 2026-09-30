@@ -36,6 +36,7 @@ const TenderDetail = named(() => import('./screens/TenderDetail'), 'TenderDetail
 const Reviews = named(() => import('./screens/Reviews'), 'Reviews');
 const Wallets = named(() => import('./screens/Wallets'), 'Wallets');
 const Payments = named(() => import('./screens/Payments'), 'Payments');
+const GatewayPayments = named(() => import('./screens/GatewayPayments'), 'GatewayPayments');
 const Referrals = named(() => import('./screens/Referrals'), 'Referrals');
 const Payouts = named(() => import('./screens/Payouts'), 'Payouts');
 const Coupons = named(() => import('./screens/Coupons'), 'Coupons');
@@ -96,6 +97,7 @@ export default function App() {
                 <Route path="/engagement-reviews" element={<EngagementReviews />} />
                 <Route path="/wallets" element={<Wallets />} />
                 <Route path="/payments" element={<Payments />} />
+                <Route path="/gateway-payments" element={<GatewayPayments />} />
                 <Route path="/referrals" element={<Referrals />} />
                 <Route path="/payouts" element={<Payouts />} />
                 <Route path="/coupons" element={<Coupons />} />
