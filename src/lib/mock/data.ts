@@ -11,6 +11,7 @@ import type {
   AdminContractor, AdminSubscription, AdminSubscriptionPlan,
   AdminProject, AdminProjectWorker, AdminEngagementReview,
   GatewayPayment,
+  AdminBlogPost, AdminTestimonial, AdminSocialLink,
 } from '../types';
 
 const rupees = (r: number) => r * 100;
@@ -852,4 +853,75 @@ export const gatewayPayments: GatewayPayment[] = [
     booking: null,
     createdAt: days(-9),
   },
+];
+
+// Three articles covering the states the list colours on, and testimonials
+// covering the moderation decisions — including the one that matters most: an
+// approved testimonial whose author never agreed to be quoted, which must not
+// be publishable or featurable.
+export const blogPosts: AdminBlogPost[] = [
+  {
+    id: 'bp1', slug: 'how-to-hire-a-plumber-in-gaya', title: 'How to Hire a Plumber in Gaya',
+    excerpt: 'What to ask before you let anyone near your pipes.',
+    body: 'Finding a plumber is easy. Finding one who turns up is the hard part.\n\nHere is what to ask.',
+    coverImage: null, category: 'Home Services', tags: ['plumbing', 'hiring'],
+    authorName: 'JanShram Team', status: 'PUBLISHED', publishedAt: days(-4), scheduledFor: null,
+    seoTitle: null, seoDescription: null, canonicalUrl: null, ogImage: null,
+    readingMinutes: 3, createdAt: days(-6), updatedAt: days(-4),
+  },
+  {
+    id: 'bp2', slug: 'picking-a-contractor', title: 'Picking a contractor for a small build',
+    excerpt: null, body: 'A draft, still being written.',
+    coverImage: null, category: 'Contractors', tags: [], authorName: 'JanShram Team',
+    status: 'DRAFT', publishedAt: null, scheduledFor: null,
+    seoTitle: null, seoDescription: null, canonicalUrl: null, ogImage: null,
+    readingMinutes: 1, createdAt: days(-2), updatedAt: days(-1),
+  },
+  {
+    id: 'bp3', slug: 'monsoon-repairs', title: 'Monsoon repairs: what to do first',
+    excerpt: 'Written for last year, kept for next.', body: 'Older guidance.',
+    coverImage: null, category: 'Home Services', tags: ['monsoon'],
+    authorName: 'JanShram Team', status: 'ARCHIVED', publishedAt: days(-200), scheduledFor: null,
+    seoTitle: null, seoDescription: null, canonicalUrl: null, ogImage: null,
+    readingMinutes: 4, createdAt: days(-220), updatedAt: days(-120),
+  },
+];
+
+export const testimonials: AdminTestimonial[] = [
+  {
+    id: 't1', role: 'CUSTOMER', rating: 5, title: 'Found a mason same day',
+    body: 'Booked on Tuesday, he turned up Wednesday morning. Simple.',
+    consentPublic: true, consentPhoto: true, status: 'APPROVED', featured: true,
+    moderationNote: null, moderatedAt: days(-3), createdAt: days(-5),
+    user: { id: 'u1', name: 'Deepa', phone: '+91 98912 93596', avatar: null },
+  },
+  {
+    id: 't2', role: 'PROVIDER', rating: 4, title: null,
+    body: 'Work comes in steadily now. Payment tracking could be clearer.',
+    consentPublic: true, consentPhoto: false, status: 'PENDING', featured: false,
+    moderationNote: null, moderatedAt: null, createdAt: days(-1),
+    user: { id: 'u2', name: 'Ramesh Kumar', phone: '+91 98111 22233', avatar: null },
+  },
+  {
+    // The case the screen has to get right: approved, but never agreed to be
+    // quoted. It is not public and cannot be featured.
+    id: 't3', role: 'CONTRACTOR', rating: 4, title: 'Useful for finding crew',
+    body: 'Filled six places on a site in two days.',
+    consentPublic: false, consentPhoto: false, status: 'APPROVED', featured: false,
+    moderationNote: null, moderatedAt: days(-2), createdAt: days(-4),
+    user: { id: 'u3', name: 'Rajesh Sharma', phone: '+91 92170 33580', avatar: null },
+  },
+  {
+    id: 't4', role: 'CUSTOMER', rating: 2, title: null,
+    body: 'The worker cancelled twice before anyone told me.',
+    consentPublic: true, consentPhoto: false, status: 'PENDING', featured: false,
+    moderationNote: null, moderatedAt: null, createdAt: days(-1),
+    user: { id: 'u4', name: 'Ajay', phone: '+91 99000 11223', avatar: null },
+  },
+];
+
+export const socialLinks: AdminSocialLink[] = [
+  { id: 's1', platform: 'instagram', url: 'https://instagram.com/janshram', order: 1, active: true, updatedAt: days(-10) },
+  { id: 's2', platform: 'facebook', url: 'https://facebook.com/janshram', order: 2, active: true, updatedAt: days(-10) },
+  { id: 's3', platform: 'youtube', url: 'https://youtube.com/@janshram', order: 3, active: false, updatedAt: days(-10) },
 ];

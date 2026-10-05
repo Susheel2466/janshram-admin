@@ -104,6 +104,9 @@ export const http = {
   get: <T>(path: string, query?: Query) => request<T>(path, { query }),
   post: <T>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body }),
   patch: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body }),
+  // Used where the server treats a write as "make this so" rather than
+  // "create another" — a social link is one row per platform.
+  put: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body }),
   del: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
   getText: requestText,
 };

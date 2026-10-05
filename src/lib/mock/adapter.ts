@@ -12,7 +12,7 @@ import type {
   TicketMessage, TicketStatus, TicketPriority, TicketAssignee, PlatformSettings, Faq, FaqAudience, UploadSignature,
   LegalPage, SupportTicket, TicketCategory, KycStatus, ChatMessage,
   AdminContractor, AdminSubscription, AdminSubscriptionPlan, SubscriptionRevenue,
-  AdminProjectWorker,
+  AdminProjectWorker, AdminBlogPost, AdminTestimonial, SocialPlatform,
 } from '../types';
 
 const delay = <T>(value: T, ms = 220): Promise<T> =>
@@ -127,6 +127,18 @@ function categoryBreakdown(): CategoryBreakdown[] {
 // The real backend refuses deletes that would destroy financial or dispute
 // history, and rejects duplicate identities. Mirroring those rules here keeps
 // mock mode honest — otherwise the demo teaches behaviour the API won't allow.
+
+// Mirrors the backend's src/lib/content.ts so mock mode behaves the same.
+// \p{M} is kept deliberately: dropping combining marks is what mangled
+// Devanagari names elsewhere in this codebase.
+const slugify = (text: string) =>
+  text.toLowerCase().normalize('NFC')
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '') || 'post';
+
+const readingMinutes = (body: string) =>
+  Math.max(1, Math.round(body.trim().split(/\s+/).filter(Boolean).length / 200));
+
 function refuse(message: string): never {
   throw new Error(message);
 }
@@ -1127,6 +1139,121 @@ export const mockAdapter = {
     else if (entity === 'payments') csv = build(['Booking', 'Customer', 'Amount', 'Method', 'Status'], db.bookings.map((b) => [b.id, b.customer?.name, rupees(b.amount), b.paymentMethod, b.paymentStatus]));
     else if (entity === 'payouts') csv = build(['ID', 'Provider', 'Amount', 'UPI', 'Status'], db.payouts.map((p) => [p.id, p.provider?.name, rupees(p.amount), p.upiId, p.status]));
     return delay(csv);
+  },
+
+  blog: {
+    list: (params: ListParams = {}) => {
+      let rows = [...db.blogPosts];
+      if (params.status) rows = rows.filter((p) => p.status === params.status);
+      if (params.q) {
+        const q = norm(params.q as string);
+        rows = rows.filter((p) => norm(p.title).includes(q) || norm(p.slug).includes(q));
+      }
+      if (params.category) rows = rows.filter((p) => p.category === params.category);
+      rows.sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt));
+      // Summaries, like the API: no body, no SEO fields.
+      const summaries = rows.map(({ body: _b, seoTitle: _t, seoDescription: _d, canonicalUrl: _c, ogImage: _o, ...rest }) => rest);
+      return delay(paginate(summaries, params.page, params.limit ?? 20));
+    },
+    get: (id: string) => {
+      const post = db.blogPosts.find((p) => p.id === id);
+      if (!post) refuse('Article not found');
+      return delay({ post });
+    },
+    create: (data: Record<string, unknown>) => {
+      const title = String(data.title ?? '').trim();
+      const slug = String(data.slug ?? '').trim() || slugify(title);
+      if (db.blogPosts.some((p) => p.slug === slug)) refuse('That slug is already taken');
+      const now = new Date().toISOString();
+      const post: AdminBlogPost = {
+        id: `bp${db.blogPosts.length + 1}`, slug, title,
+        excerpt: (data.excerpt as string) || null,
+        body: String(data.body ?? ''),
+        coverImage: (data.coverImage as string) || null,
+        category: (data.category as string) || null,
+        tags: (data.tags as string[]) ?? [],
+        authorName: (data.authorName as string) || null,
+        status: (data.status as AdminBlogPost['status']) ?? 'DRAFT',
+        publishedAt: data.status === 'PUBLISHED' ? now : null,
+        scheduledFor: (data.scheduledFor as string) || null,
+        seoTitle: (data.seoTitle as string) || null,
+        seoDescription: (data.seoDescription as string) || null,
+        canonicalUrl: (data.canonicalUrl as string) || null,
+        ogImage: (data.ogImage as string) || null,
+        readingMinutes: readingMinutes(String(data.body ?? '')),
+        createdAt: now, updatedAt: now,
+      };
+      db.blogPosts.unshift(post);
+      return delay({ post });
+    },
+    update: (id: string, data: Record<string, unknown>) => {
+      const post = db.blogPosts.find((p) => p.id === id);
+      if (!post) refuse('Article not found');
+      if (typeof data.slug === 'string' && data.slug !== post.slug
+          && db.blogPosts.some((p) => p.slug === data.slug)) refuse('That slug is already taken');
+      Object.assign(post, data);
+      // publishedAt is the moment it first went live, not the last edit —
+      // re-publishing an article must not reorder it ahead of newer ones.
+      if (data.status === 'PUBLISHED' && !post.publishedAt) post.publishedAt = new Date().toISOString();
+      if (typeof data.body === 'string') post.readingMinutes = readingMinutes(data.body);
+      post.updatedAt = new Date().toISOString();
+      return delay({ post });
+    },
+    remove: (id: string) => {
+      const i = db.blogPosts.findIndex((p) => p.id === id);
+      if (i >= 0) db.blogPosts.splice(i, 1);
+      return delay({ ok: true as const });
+    },
+  },
+
+  testimonials: {
+    list: (params: ListParams = {}) => {
+      let rows = [...db.testimonials];
+      if (params.status) rows = rows.filter((t) => t.status === params.status);
+      if (params.role) rows = rows.filter((t) => t.role === params.role);
+      if (params.rating) rows = rows.filter((t) => t.rating === Number(params.rating));
+      // Waiting first, then newest — the queue, not the archive.
+      const order = { PENDING: 0, APPROVED: 1, HIDDEN: 2, REJECTED: 3 };
+      rows.sort((a, b) => order[a.status] - order[b.status] || +new Date(b.createdAt) - +new Date(a.createdAt));
+      return delay(paginate(rows, params.page, params.limit ?? 20));
+    },
+    moderate: (id: string, data: { status?: string; featured?: boolean; moderationNote?: string }) => {
+      const t = db.testimonials.find((x) => x.id === id);
+      if (!t) refuse('Testimonial not found');
+      const status = (data.status as AdminTestimonial['status']) ?? t.status;
+      // The backend's canFeature(): both halves. Approval is the moderator's
+      // to give; consent is not, so an unconsented quote can never be featured.
+      if (data.featured && !(status === 'APPROVED' && t.consentPublic)) {
+        refuse(t.consentPublic
+          ? 'Only an approved testimonial can be featured'
+          : 'This person did not agree to be quoted publicly');
+      }
+      if (data.status) { t.status = status; t.moderatedAt = new Date().toISOString(); }
+      if (data.featured !== undefined) t.featured = data.featured;
+      if (data.moderationNote !== undefined) t.moderationNote = data.moderationNote || null;
+      // Losing approval takes the quote off the site with it.
+      if (t.status !== 'APPROVED') t.featured = false;
+      return delay({ testimonial: t });
+    },
+  },
+
+  socialLinks: {
+    list: () => delay({ links: [...db.socialLinks].sort((a, b) => a.order - b.order) }),
+    save: (platform: SocialPlatform, data: { url: string; order: number; active: boolean }) => {
+      let link = db.socialLinks.find((l) => l.platform === platform);
+      if (link) {
+        Object.assign(link, data, { updatedAt: new Date().toISOString() });
+      } else {
+        link = { id: `s${db.socialLinks.length + 1}`, platform, ...data, updatedAt: new Date().toISOString() };
+        db.socialLinks.push(link);
+      }
+      return delay({ link });
+    },
+    remove: (platform: SocialPlatform) => {
+      const i = db.socialLinks.findIndex((l) => l.platform === platform);
+      if (i >= 0) db.socialLinks.splice(i, 1);
+      return delay({ ok: true as const });
+    },
   },
 
   // Thin, like the sites mock: this screen is developed against the real API,

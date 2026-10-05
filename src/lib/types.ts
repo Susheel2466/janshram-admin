@@ -764,3 +764,90 @@ export interface GatewayPaymentStats {
   capturedCount: number;
   failedCount: number;
 }
+
+// ───────────────────────── Content ─────────────────────────
+
+export type PostStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+/** An article, as the console edits it. */
+/**
+ * What the list endpoint returns: everything except the article itself.
+ *
+ * The body and the SEO fields are left out of the list on purpose — a page of
+ * twenty articles would otherwise ship twenty full texts to draw twenty rows.
+ * The editor fetches one post in full when it opens.
+ */
+export interface AdminBlogPostSummary {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  coverImage: string | null;
+  category: string | null;
+  tags: string[];
+  authorName: string | null;
+  status: PostStatus;
+  publishedAt: string | null;
+  scheduledFor: string | null;
+  readingMinutes: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminBlogPost extends AdminBlogPostSummary {
+  body: string;
+  /**
+   * Separate from title and excerpt on purpose: a headline that reads well on
+   * the page is often the wrong length or tone for a search result.
+   */
+  seoTitle: string | null;
+  seoDescription: string | null;
+  canonicalUrl: string | null;
+  ogImage: string | null;
+}
+
+export type TestimonialStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'HIDDEN';
+
+/**
+ * What somebody said about JanShram itself.
+ *
+ * Not a Review — that is a customer rating a provider for one booking. These
+ * two are never averaged together.
+ */
+/**
+ * Which side of the platform somebody spoke as.
+ *
+ * Its own union rather than the console's Role, which has ADMIN and no
+ * CONTRACTOR — a contractor's testimonial would not have typechecked, and
+ * ADMIN is not a thing anybody writes a testimonial as.
+ */
+export type TestimonialRole = 'CUSTOMER' | 'PROVIDER' | 'CONTRACTOR';
+
+export interface AdminTestimonial {
+  id: string;
+  role: TestimonialRole;
+  rating: number;
+  title: string | null;
+  body: string;
+  /** Theirs to give, and a moderator cannot give it for them. */
+  consentPublic: boolean;
+  consentPhoto: boolean;
+  status: TestimonialStatus;
+  featured: boolean;
+  moderationNote: string | null;
+  moderatedAt: string | null;
+  createdAt: string;
+  user: { id: string; name: string | null; phone: string | null; avatar: string | null } | null;
+}
+
+export const SOCIAL_PLATFORMS = ['instagram', 'facebook', 'youtube', 'linkedin', 'x', 'whatsapp'] as const;
+export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
+
+export interface AdminSocialLink {
+  id: string;
+  platform: SocialPlatform;
+  url: string;
+  order: number;
+  active: boolean;
+  updatedAt: string;
+}
