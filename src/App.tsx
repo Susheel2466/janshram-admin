@@ -46,6 +46,9 @@ const Conversations = named(() => import('./screens/Conversations'), 'Conversati
 const Tickets = named(() => import('./screens/Tickets'), 'Tickets');
 const Faqs = named(() => import('./screens/Faqs'), 'Faqs');
 const LegalPages = named(() => import('./screens/LegalPages'), 'LegalPages');
+const Blog = named(() => import('./screens/Blog'), 'Blog');
+const Testimonials = named(() => import('./screens/Testimonials'), 'Testimonials');
+const SocialLinks = named(() => import('./screens/SocialLinks'), 'SocialLinks');
 const Settings = named(() => import('./screens/Settings'), 'Settings');
 const AuditLog = named(() => import('./screens/AuditLog'), 'AuditLog');
 const LoginAudit = named(() => import('./screens/LoginAudit'), 'LoginAudit');
@@ -107,6 +110,9 @@ export default function App() {
               <Route path="/tickets" element={<Tickets />} />
                 <Route path="/faqs" element={<Faqs />} />
                 <Route path="/legal" element={<LegalPages />} />
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/testimonials" element={<Testimonials />} />
+                <Route path="/social-links" element={<SocialLinks />} />
                 <Route path="/settings" element={<Settings />} />
               <Route path="/audit" element={<AuditLog />} />
               <Route path="/login-audit" element={<LoginAudit />} />

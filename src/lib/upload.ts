@@ -1,7 +1,7 @@
 import { adminApi } from './api';
 
 // Mirrors ALLOWED_FOLDERS on the backend's /uploads/sign route.
-export type UploadFolder = 'avatars' | 'service-photos' | 'documents' | 'tenders' | 'chat' | 'support';
+export type UploadFolder = 'avatars' | 'service-photos' | 'documents' | 'tenders' | 'chat' | 'support' | 'blog';
 
 interface CloudinaryResponse {
   secure_url?: string;

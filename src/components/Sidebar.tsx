@@ -4,7 +4,7 @@ import {
   Gavel, Star, WalletMinimal, TicketPercent, Bell, MessagesSquare, MessageSquare, Settings,
   ShieldCheck, BadgeCheck, CreditCard, Gift, LifeBuoy, ScrollText, Banknote, KeyRound, HardHat,
   Building2, UsersRound, Receipt,
-  HelpCircle, FileText,
+  HelpCircle, FileText, Newspaper, MessageSquareQuote, Share2,
 } from 'lucide-react';
 import { cn } from './ui/utils';
 import { isMock } from '../lib/api';
@@ -48,6 +48,16 @@ const sections: { title: string; items: NavItem[] }[] = [
       { to: '/conversations', label: 'Support Chats', icon: MessagesSquare },
       { to: '/faqs', label: 'FAQs', icon: HelpCircle },
       { to: '/legal', label: 'Legal Pages', icon: FileText },
+    ],
+  },
+  // The public website's content, separate from Operations: nothing here moves
+  // a booking, and everything here is visible to people who have never signed in.
+  {
+    title: 'Website',
+    items: [
+      { to: '/blog', label: 'Blog', icon: Newspaper },
+      { to: '/testimonials', label: 'Testimonials', icon: MessageSquareQuote },
+      { to: '/social-links', label: 'Social Links', icon: Share2 },
     ],
   },
   {
