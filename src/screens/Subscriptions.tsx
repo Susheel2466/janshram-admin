@@ -9,7 +9,7 @@
 // because "will this bill my existing customers more?" is the first question
 // anyone touching a price has.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { IndianRupee, Ban, Play, TrendingUp, AlertTriangle } from 'lucide-react';
 import { adminApi } from '../lib/api';
@@ -22,7 +22,10 @@ import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
 import { StatCard } from '../components/StatCard';
-import type { SubscriptionStatus } from '../lib/types';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '../components/ui/dialog';
+import type { SubscriptionStatus, TrialLengthResult } from '../lib/types';
 
 const SUB_STYLE: Record<SubscriptionStatus, string> = {
   TRIAL: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
@@ -31,7 +34,107 @@ const SUB_STYLE: Record<SubscriptionStatus, string> = {
   SUSPENDED: 'bg-red-500/10 text-red-600 border-red-500/20',
 };
 
+/**
+ * Re-dates existing contractors' trials to whatever the trial length is set to.
+ *
+ * Changing the setting only reaches new registrations, so raising the trial
+ * without this leaves everyone already signed up expiring on the old one. It is
+ * shown as a preview first because it writes to every contractor at once, and
+ * the numbers are the only way to tell beforehand whether that is what you
+ * meant — particularly "still expired", which is contractors who joined longer
+ * ago than the whole trial and are not helped by this at all.
+ */
+function TrialLengthDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [preview, setPreview] = useState<TrialLengthResult | null>(null);
+  const [done, setDone] = useState<TrialLengthResult | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) { setPreview(null); setDone(null); return; }
+    let live = true;
+    adminApi.subscriptions
+      .applyTrialLength(true)
+      .then((r) => { if (live) setPreview(r); })
+      .catch((e) => toast.error(e instanceof Error ? e.message : 'Could not read the current trials'));
+    return () => { live = false; };
+  }, [open]);
+
+  const apply = async () => {
+    setBusy(true);
+    try {
+      const r = await adminApi.subscriptions.applyTrialLength(false);
+      setDone(r);
+      toast.success(r.updated === 0 ? 'Nothing needed changing' : `${r.updated} trials re-dated`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not apply the trial length');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const shown = done ?? preview;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Apply trial length to existing contractors</DialogTitle>
+          <DialogDescription>
+            Sets every unpaid contractor's trial to the current length, counted from the day they
+            signed up. Contractors who have bought a plan are not touched.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!shown ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Reading the current trials…</p>
+        ) : (
+          <div className="space-y-3 py-2">
+            <p className="text-sm">
+              Trial length is currently{' '}
+              <span className="font-semibold">{shown.trialDays} days</span>. Change it in Settings
+              first if that is not what you want.
+            </p>
+            <dl className="rounded-lg border divide-y text-sm">
+              <Row label={done ? 'Re-dated' : 'Will be re-dated'} value={done ? done.updated : shown.wouldUpdate} strong />
+              <Row label="Already running at least that long" value={shown.alreadyLonger} />
+              <Row label="Paying contractors, untouched" value={shown.paidUntouched} />
+              <Row
+                label="Still expired — signed up longer ago than the trial"
+                value={shown.stillExpired}
+                hint={shown.stillExpired > 0 ? 'A longer trial would not reach these; they need a plan or a manual extension.' : undefined}
+              />
+            </dl>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>{done ? 'Close' : 'Cancel'}</Button>
+          {!done && (
+            <Button onClick={apply} disabled={busy || !preview || preview.wouldUpdate === 0}>
+              {busy ? 'Applying…' : preview && preview.wouldUpdate === 0 ? 'Nothing to do' : 'Apply'}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Row({ label, value, strong, hint }: { label: string; value: number; strong?: boolean; hint?: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 px-3 py-2">
+      <div>
+        <dt className={strong ? 'font-medium' : ''}>{label}</dt>
+        {hint && <dd className="mt-0.5 text-xs text-muted-foreground">{hint}</dd>}
+      </div>
+      <dd className={`shrink-0 tabular-nums ${strong ? 'text-lg font-bold' : 'font-medium'}`}>{value}</dd>
+    </div>
+  );
+}
+
 export function Subscriptions() {
+  const [trialToolOpen, setTrialToolOpen] = useState(false);
+  const openTrialTool = () => setTrialToolOpen(true);
   const plans = useApi(() => adminApi.subscriptions.plans(), []);
   const revenue = useApi(() => adminApi.subscriptions.revenue(30), []);
   const [status, setStatus] = useState<SubscriptionStatus | ''>('');
@@ -79,7 +182,11 @@ export function Subscriptions() {
 
   return (
     <div>
-      <PageHeader title="Subscriptions" description="Plans, subscribers and revenue" />
+      <PageHeader
+        title="Subscriptions"
+        description="Plans, subscribers and revenue"
+        actions={<Button variant="outline" onClick={openTrialTool}>Apply trial length</Button>}
+      />
 
       {/* Failures sit beside revenue rather than out of sight: a month where
           revenue held steady while failures tripled is a payment problem, and a
@@ -242,6 +349,7 @@ export function Subscriptions() {
           </CardContent>
         </Card>
       </section>
+      <TrialLengthDialog open={trialToolOpen} onClose={() => setTrialToolOpen(false)} />
     </div>
   );
 }

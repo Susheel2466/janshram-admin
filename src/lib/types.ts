@@ -557,6 +557,24 @@ export interface PlatformSettings {
   // Outbound booking alert channels (in-app notifications are always on).
   smsBookingAlerts: boolean;
   whatsappBookingAlerts: boolean;
+  /**
+   * Days a newly registered contractor gets free.
+   *
+   * Applies to signups from the moment it is saved. It does not reach anyone
+   * already registered — their trial was dated when they joined.
+   */
+  contractorTrialDays: number;
+}
+
+/** What re-dating existing contractors' trials would do, or did. */
+export interface TrialLengthResult {
+  trialDays: number;
+  updated: number;
+  wouldUpdate: number;
+  alreadyLonger: number;
+  paidUntouched: number;
+  stillExpired: number;
+  dryRun: boolean;
 }
 
 export interface ReferralTotals {

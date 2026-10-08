@@ -12,7 +12,7 @@ import type {
   SupportTicket, TicketMessage, TicketStats, TicketStatus, TicketPriority, TicketAssignee,
   PlatformSettings, ReferralTotals, Payout, OtpLogEntry, Faq, LegalPage, ChatMessage, UploadSignature,
   MessageLog, MessageLogSummary, KycCheck, KycStatus, KycVerifierInfo,
-  AdminContractor, AdminSubscription, AdminSubscriptionPlan, SubscriptionRevenue,
+  AdminContractor, AdminSubscription, AdminSubscriptionPlan, TrialLengthResult, SubscriptionRevenue,
   AdminProject, AdminProjectWorker, AdminEngagementReview,
   GatewayPayment, GatewayPaymentStats,
   AdminBlogPost, AdminBlogPostSummary, AdminTestimonial, AdminSocialLink, SocialPlatform,
@@ -81,6 +81,8 @@ export const httpAdapter: AdminApi = {
     setSuspended: (id, suspended, note) =>
       http.patch<{ subscription: AdminSubscription | null }>(`/admin/subscriptions/${id}/suspend`, { suspended, note }),
     revenue: (days) => http.get<SubscriptionRevenue>('/admin/subscription-revenue', clean({ days })),
+    applyTrialLength: (dryRun?: boolean) =>
+      http.post<TrialLengthResult>('/admin/subscriptions/apply-trial-length', { dryRun }),
   },
 
   providers: {
