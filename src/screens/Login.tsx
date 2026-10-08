@@ -68,12 +68,12 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[1.05fr_1fr]">
+    <div className="min-h-screen lg:grid lg:grid-cols-[1.05fr_minmax(0,1fr)]">
       {/* ── What this console is ──
           Hidden below lg: on a phone the form is the whole point, and a
           marketing panel above it is a screen of scrolling before the one
           field anybody came to fill in. */}
-      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden px-12 py-10">
+      <aside className="relative hidden lg:flex flex-col justify-center overflow-hidden px-12 py-10">
         {/* The soft blue wash and the shapes behind it, in CSS rather than an
             image — it scales to any window and costs nothing to load. */}
         <div
@@ -115,7 +115,7 @@ export function Login() {
             </span>
           </div>
 
-          <h2 className="mt-12 max-w-md text-4xl font-extrabold leading-[1.15] tracking-tight text-slate-900">
+          <h2 className="mt-10 max-w-[22ch] text-[2.6rem] font-extrabold leading-[1.1] tracking-tight text-slate-900">
             Manage the Workforce Marketplace with{' '}
             <span className="text-[#0A84FF]">Confidence</span>
           </h2>
@@ -142,16 +142,16 @@ export function Login() {
           </ul>
         </div>
 
-        {/* The photograph of the crew belongs here. We do not have the file, and
-            the panel is composed to stand without it rather than reserving a
-            grey rectangle for something that may never arrive. Drop an image in
-            and give it this slot. */}
-        <p className="text-xs text-slate-400">Janshram Admin Console</p>
+        {/* A photograph of the crew belongs under this, as in the design. We
+            do not have the file, so the column is centred and stands without
+            it rather than holding a void open for something that may never
+            arrive. Drop an <img> in here and switch justify-center back to
+            justify-between. */}
       </aside>
 
       {/* ── Signing in ── */}
-      <main className="flex items-center justify-center bg-background px-5 py-10">
-        <div className="w-full max-w-sm">
+      <main className="flex min-w-0 items-center justify-center px-4 py-10 sm:px-5" style={{ background: 'var(--muted)' }}>
+        <div className="w-full min-w-0 max-w-md rounded-3xl border bg-card px-5 py-8 shadow-xl shadow-black/5 sm:px-8 sm:py-10">
           <div className="text-center">
             <h1 className="text-[26px] font-bold tracking-tight">Janshram Admin</h1>
             <p className="mt-1.5 text-sm text-muted-foreground">
