@@ -1069,6 +1069,7 @@ export const mockAdapter = {
           maintenanceMode: false,
           smsBookingAlerts: true,
           whatsappBookingAlerts: true,
+          contractorTrialDays: 7,
         },
       }),
     update: (patch: Partial<PlatformSettings>) =>
@@ -1083,6 +1084,7 @@ export const mockAdapter = {
           maintenanceMode: false,
           smsBookingAlerts: true,
           whatsappBookingAlerts: true,
+          contractorTrialDays: 7,
           ...patch,
         },
       }),
@@ -1429,6 +1431,22 @@ export const mockAdapter = {
       }
       return delay({ subscription: s ?? null });
     },
+    /**
+     * Mock mode cannot re-date rows it does not own, so it reports the shape
+     * without pretending to have changed anything — a demo that claimed to
+     * have moved forty trials would be teaching the wrong thing about a button
+     * whose whole point is that it writes to every contractor at once.
+     */
+    applyTrialLength: (dryRun?: boolean) =>
+      delay({
+        trialDays: 7,
+        updated: 0,
+        wouldUpdate: 0,
+        alreadyLonger: db.subscriptions.filter((s) => !s.plan).length,
+        paidUntouched: db.subscriptions.filter((s) => s.plan).length,
+        stillExpired: 0,
+        dryRun: Boolean(dryRun),
+      }),
     revenue: (days = 30) => {
       const paid = db.subscriptions.filter((s) => s.plan && s.status !== 'TRIAL');
       const byState = db.subscriptions.reduce<Record<string, number>>((acc, s) => {

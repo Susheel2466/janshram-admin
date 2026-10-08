@@ -85,6 +85,19 @@ export function Settings() {
                     onChange={(e) => setField('platformCommissionPercent', Number(e.target.value))} />
                 </div>
                 <div className="space-y-2">
+                  {/* htmlFor/id, which the fields around this one do not have:
+                      without it the label is just text beside a box, so a
+                      screen reader announces an unnamed number input. */}
+                  <Label htmlFor="contractor-trial-days">Contractor free trial (days)</Label>
+                  <Input id="contractor-trial-days" type="number" min={1} max={365} value={form.contractorTrialDays}
+                    onChange={(e) => setField('contractorTrialDays', Number(e.target.value))} />
+                  <p className="text-xs text-muted-foreground">
+                    How long a contractor can use the panel before subscribing. Applies to accounts
+                    registered after you save — it does not extend anyone already signed up, whose
+                    trial was dated when they joined.
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label>Referral reward — referrer (₹)</Label>
                   <Input type="number" value={form.referralRewardRupees}
                     onChange={(e) => setField('referralRewardRupees', Number(e.target.value))} />
